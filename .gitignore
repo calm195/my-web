@@ -1,0 +1,30 @@
+# Runtime data and secrets
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+/var/
+/data/
+/backups/
+*.log
+
+# Build/development outputs
+node_modules/
+.nuxt/
+.output/
+/apps/*/dist/
+/backend/bin/
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+
+# Existing prototype is a separate repository, not application source.
+/prototype/
