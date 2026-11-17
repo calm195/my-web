@@ -70,9 +70,9 @@ scripts/                   # 可重复验证与开发辅助
 deploy/                    # Caddy、systemd、环境变量示例
 ```
 
-目前只创建了本轮设计需要的 SQL、合同和脚本目录；应用目录在下一阶段初始化。现有 `prototype/` 有独立 Git 仓库，只作为设计参考，不能不加说明地把其 `.git` 纳入应用 monorepo，也不把 localStorage 示例逻辑复制成生产业务。
+P1 已建立 `apps/web`、`apps/admin`、`packages/api-client`、`packages/ui`，以及 Go 的认证、配置、站点设置、HTTP 与数据库模块。内容、评论、资源、同步和持久任务模块按后续阶段建立。现有 `prototype/` 有独立 Git 仓库，只作为设计参考，其 `.git` 和 localStorage 示例逻辑不并入应用。
 
-2026-11-17 补充：完整开发目录（含测试、本地脚本、部署配置和验证记录）已写入 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。本节定义工程职责，尚未创建的应用目录仍按计划逐步初始化。
+2026-11-17 补充：完整开发目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 实际固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见 `toolchain.json`，依赖以锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
 
 ## 4 模块依赖
 
