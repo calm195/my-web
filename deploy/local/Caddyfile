@@ -1,0 +1,29 @@
+{
+  admin off
+  auto_https off
+}
+
+https://localhost:{{HTTPS_PORT}} {
+  bind 127.0.0.1
+  tls "{{RUN_DIR}}/certs/localhost.pem" "{{RUN_DIR}}/certs/localhost.key"
+  # 延迟到上游响应后覆盖，避免代理与应用各添加一次相同响应头。
+  header >Cache-Control "no-store"
+
+  # 内部健康探针不暴露在公开入口。
+  @internal path /healthz /readyz
+  respond @internal 404
+
+  handle /api/v1/* {
+    reverse_proxy 127.0.0.1:{{API_PORT}}
+  }
+  handle /media/* {
+    reverse_proxy 127.0.0.1:{{API_PORT}}
+  }
+  @admin path /admin /admin/*
+  handle @admin {
+    reverse_proxy 127.0.0.1:{{ADMIN_PORT}}
+  }
+  handle {
+    reverse_proxy 127.0.0.1:{{WEB_PORT}}
+  }
+}
