@@ -1,0 +1,178 @@
+[
+  {
+    "name": "create_article",
+    "schema": "CreateContent",
+    "valid": true,
+    "value": {
+      "draft": {
+        "kind": "article",
+        "title": "我的第一篇文章",
+        "summary": "开始记录技术与生活。",
+        "markdown": "## 起点\n这是一篇示例。",
+        "slug": "first-post",
+        "display_order": 0,
+        "cover": null,
+        "links": [],
+        "related_content_ids": [],
+        "body_asset_sha256s": [],
+        "details": {
+          "channel": "tech"
+        },
+        "category_id": null,
+        "tag_ids": []
+      }
+    }
+  },
+  {
+    "name": "save_incomplete_draft",
+    "schema": "SaveDraft",
+    "valid": true,
+    "value": {
+      "expected_generation": 2,
+      "draft": {
+        "kind": "article",
+        "title": "",
+        "summary": "",
+        "markdown": "",
+        "slug": null,
+        "display_order": 0,
+        "cover": null,
+        "links": [],
+        "related_content_ids": [],
+        "body_asset_sha256s": [],
+        "details": {
+          "channel": null
+        },
+        "category_id": null,
+        "tag_ids": []
+      }
+    }
+  },
+  {
+    "name": "publish",
+    "schema": "PublishContent",
+    "valid": true,
+    "value": {
+      "expected_generation": 3,
+      "revision_id": "019a8bc0-1000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "anonymous_comment",
+    "schema": "CreateVisitorComment",
+    "valid": true,
+    "value": {
+      "target": {
+        "scope": "guestbook",
+        "content_id": null
+      },
+      "reply_to_id": null,
+      "nickname": "访客",
+      "body": "你好"
+    }
+  },
+  {
+    "name": "reject_owner_spoof",
+    "schema": "CreateVisitorComment",
+    "valid": false,
+    "value": {
+      "target": {
+        "scope": "guestbook",
+        "content_id": null
+      },
+      "reply_to_id": null,
+      "nickname": "站主",
+      "body": "你好",
+      "author_kind": "owner"
+    }
+  },
+  {
+    "name": "reject_missing_generation",
+    "schema": "SaveDraft",
+    "valid": false,
+    "value": {
+      "draft": {
+        "kind": "article",
+        "title": "我的第一篇文章",
+        "summary": "开始记录技术与生活。",
+        "markdown": "## 起点\n这是一篇示例。",
+        "slug": "first-post",
+        "display_order": 0,
+        "cover": null,
+        "links": [],
+        "related_content_ids": [],
+        "body_asset_sha256s": [],
+        "details": {
+          "channel": "tech"
+        },
+        "category_id": null,
+        "tag_ids": []
+      }
+    }
+  },
+  {
+    "name": "reject_wrong_kind_details",
+    "schema": "CreateContent",
+    "valid": false,
+    "value": {
+      "draft": {
+        "kind": "article",
+        "title": "我的第一篇文章",
+        "summary": "开始记录技术与生活。",
+        "markdown": "## 起点\n这是一篇示例。",
+        "slug": "first-post",
+        "display_order": 0,
+        "cover": null,
+        "links": [],
+        "related_content_ids": [],
+        "body_asset_sha256s": [],
+        "details": {
+          "group_name": "后端"
+        },
+        "category_id": null,
+        "tag_ids": []
+      }
+    }
+  },
+  {
+    "name": "reject_unconfirmed_purge",
+    "schema": "PurgeContent",
+    "valid": false,
+    "value": {
+      "expected_generation": 2,
+      "impact_token": "example",
+      "confirm": false
+    }
+  },
+  {
+    "name": "reject_guestbook_content_id",
+    "schema": "CommentTarget",
+    "valid": false,
+    "value": {
+      "scope": "guestbook",
+      "content_id": "019a8bc0-1000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "reject_manual_without_draft",
+    "schema": "ResolveConflict",
+    "valid": false,
+    "value": {
+      "expected_generation": 3,
+      "expected_remote_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "selection": "manual",
+      "action": "save_draft"
+    }
+  },
+  {
+    "name": "resolve_remote_save_draft",
+    "schema": "ResolveConflict",
+    "valid": true,
+    "value": {
+      "expected_generation": 3,
+      "expected_remote_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "selection": "remote",
+      "action": "save_draft"
+    }
+  }
+]

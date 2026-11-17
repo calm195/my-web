@@ -1,0 +1,5485 @@
+openapi: 3.1.1
+info:
+  title: 个人网站 API
+  version: 1.0.0-design
+  description: 首版设计合同；尚无运行中的生产 API。前后端分离，只有 Go 执行业务和权限校验。字段 snake_case，时间 RFC3339 UTC，所有业务响应 no-store。
+servers:
+- url: /
+  description: 同源反向代理入口；API 使用完整 /api/v1 路径
+tags:
+- name: 公开端
+- name: 管理端
+- name: 认证
+paths:
+  /api/v1/public/site:
+    get:
+      operationId: getPublicSite
+      summary: 读取公开站点设置
+      description: 读取公开站点设置
+      tags:
+      - 公开端
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSite'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/home:
+    get:
+      operationId: getPublicHome
+      summary: 读取首页组合内容
+      description: 每类文章最多 6 篇，精选项目最多 6 个；所有字段只来自公开版本。
+      tags:
+      - 公开端
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicHome'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/articles:
+    get:
+      operationId: listPublicArticles
+      summary: 文章列表与标题摘要搜索
+      description: 筛选条件取 AND；first_published_at DESC,id DESC；不搜索正文。返回结果只用当前公开版本。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+        description: trim + Unicode case fold 后按标题摘要字面包含匹配；空 q 按普通列表
+      - name: channel
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - tech
+          - life
+        description: ''
+      - name: category_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      - name: tag_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicCards'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/articles/{slug}:
+    get:
+      operationId: getPublicArticle
+      summary: 读取公开文章
+      description: 旧 slug 且内容仍公开时 308 到规范 API 路径，Location 同源；未公开或不存在均 404。Nuxt 同步将页面旧链接重定向到 canonical_path。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          maxLength: 100
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '308':
+          description: 仍公开的旧链接跳转到当前路径
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Location:
+              required: true
+              schema:
+                type: string
+  /api/v1/public/projects:
+    get:
+      operationId: listPublicProjects
+      summary: 读取公开项目列表
+      description: display_order ASC,first_published_at DESC,id DESC。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: featured
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicCards'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/projects/{slug}:
+    get:
+      operationId: getPublicProject
+      summary: 读取公开项目详情
+      description: 旧 slug 的处理同文章详情；项目不接受评论。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          maxLength: 100
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '308':
+          description: 仍公开的旧链接跳转到当前路径
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Location:
+              required: true
+              schema:
+                type: string
+  /api/v1/public/profile:
+    get:
+      operationId: getPublicProfile
+      summary: 读取公开个人资料
+      description: 读取公开个人资料
+      tags:
+      - 公开端
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/skills:
+    get:
+      operationId: listPublicSkills
+      summary: 读取公开技能
+      description: display_order ASC,id ASC；返回 kind=skill 的详情，相关内容只投影仍公开的目标。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: group
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 80
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicContents'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/taxonomy:
+    get:
+      operationId: listPublicTaxonomy
+      summary: 读取已公开文章使用的分类标签
+      description: 仅含公开文章引用的标签；不返回草稿专用标签。公开 DTO 不应包含管理元数据，使用 PublicTaxonomies schema。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - category
+          - tag
+        description: ''
+      - name: channel
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - tech
+          - life
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicTaxonomies'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/sitemap:
+    get:
+      operationId: listSitemapEntries
+      summary: 读取站点地图条目
+      description: 包含六个静态公开入口和当前公开文章/项目规范路径；不包含搜索结果、管理端、草稿、旧别名；Nuxt 生成 XML。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SitemapEntries'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/public/comments:
+    get:
+      operationId: listPublicThreads
+      summary: 读取公开根留言
+      description: 文章范围必须传 content_id；留言板禁止 content_id。根留言按创建时间倒序，回复另行分页，隐藏整组不计入 total。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: scope
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - article
+          - guestbook
+        description: ''
+      - name: content_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicThreads'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+    post:
+      operationId: createVisitorComment
+      summary: 提交匿名评论或回复
+      description: 事务中校验文章、根留言及回复目标仍公开；昵称不能决定站主身份。幂等响应只含公开字段。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicComment'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisitorComment'
+            example:
+              target:
+                scope: guestbook
+                content_id: null
+              reply_to_id: null
+              nickname: 访客
+              body: 你好
+  /api/v1/public/comments/{id}/replies:
+    get:
+      operationId: listPublicReplies
+      summary: 读取根留言下平铺回复
+      description: id 必须是公开根留言；回复按 created_at ASC,id ASC。不可见目标统一 404。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicReplies'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /media/{sha256}/{variant}:
+    get:
+      operationId: getPublicMedia
+      summary: 读取当前公开内容引用的图片
+      description: 每次校验当前公开引用；不可公开 404。派生图未就绪时返回原图，Content-Type 按实际文件，前端保持原比例。
+      tags:
+      - 公开端
+      security: []
+      parameters:
+      - name: sha256
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      - name: variant
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+          - original
+          - thumb
+          - reading
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+  /api/v1/admin/session:
+    post:
+      operationId: login
+      summary: 站主登录
+      description: 校验 Origin/Referer 与登录限频。此接口无现存会话、无需 CSRF 或幂等键；不自动重试登录。
+      tags:
+      - 认证
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Set-Cookie:
+              schema:
+                type: string
+              description: __Host-site_session=<opaque>; HttpOnly; Secure; SameSite=Lax; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+    get:
+      operationId: getSession
+      summary: 读取当前站主会话
+      description: 读取当前站主会话
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    delete:
+      operationId: logout
+      summary: 退出并使当前会话失效
+      description: 校验 CSRF 后删除当前会话并清 Cookie；不使用幂等记录重放失效会话。已失效返回 401，前端仍可清理登录状态。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '204':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/dashboard:
+    get:
+      operationId: getDashboard
+      summary: 读取后台概览
+      description: 读取后台概览
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/contents:
+    get:
+      operationId: listAdminContents
+      summary: 查询内容与回收站
+      description: 默认 lifecycle=active；后台标题优先展示修改稿，仅后台搜索范围内使用。updated_at DESC,id DESC。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: kind
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ContentKind'
+        description: ''
+      - name: lifecycle
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - active
+          - trash
+        description: ''
+      - name: visibility
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - published
+          - unpublished
+        description: ''
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContents'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    post:
+      operationId: createContent
+      summary: 创建内容及首份修改稿
+      description: 创建内容及首份修改稿
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '201':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContent'
+            example:
+              draft:
+                kind: article
+                title: 我的第一篇文章
+                summary: 开始记录技术与生活。
+                markdown: '## 起点
+
+                  这是一篇示例。'
+                slug: first-post
+                display_order: 0
+                cover: null
+                links: []
+                related_content_ids: []
+                body_asset_sha256s: []
+                details:
+                  channel: tech
+                category_id: null
+                tag_ids: []
+  /api/v1/admin/contents/{id}:
+    get:
+      operationId: getAdminContent
+      summary: 读取内容公开版、修改稿与同步状态
+      description: 读取内容公开版、修改稿与同步状态
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/contents/{id}/draft:
+    put:
+      operationId: saveDraft
+      summary: 保存完整修改稿
+      description: 在同一事务插入不可变版本、CAS 更新 generation、写 outbox；不影响公开指针。trash 状态拒绝。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDraft'
+            example:
+              expected_generation: 2
+              draft:
+                kind: article
+                title: ''
+                summary: ''
+                markdown: ''
+                slug: null
+                display_order: 0
+                cover: null
+                links: []
+                related_content_ids: []
+                body_asset_sha256s: []
+                details:
+                  channel: null
+                category_id: null
+                tag_ids: []
+  /api/v1/admin/contents/{id}/discard-draft:
+    post:
+      operationId: discardDraft
+      summary: 丢弃当前修改稿
+      description: 保留历史版本和公开版本；新内容丢弃后仍为未发布空对象。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedGeneration'
+  /api/v1/admin/contents/{id}/publish:
+    post:
+      operationId: publishContent
+      summary: 发布选定版本
+      description: 校验完整性、渲染和图片就绪；提交本地事务后公开成功，sync 独立为 pending/failed 等状态，不等待 Git。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishContent'
+  /api/v1/admin/contents/{id}/withdraw:
+    post:
+      operationId: withdrawContent
+      summary: 撤回公开内容
+      description: 所有类型可撤回；保留最后公开版本及修改稿。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedGeneration'
+  /api/v1/admin/contents/{id}/trash:
+    post:
+      operationId: trashContent
+      summary: 移入回收站
+      description: 仅 article/project；立即下线，保留内容、历史、评论及资源。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedGeneration'
+  /api/v1/admin/contents/{id}/restore:
+    post:
+      operationId: restoreContent
+      summary: 恢复为未发布
+      description: 仅回收站 article/project；保留稳定 id，visibility 必须为 unpublished。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContent'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpectedGeneration'
+  /api/v1/admin/contents/{id}/purge-impact:
+    get:
+      operationId: getPurgeImpact
+      summary: 预览彻底删除影响
+      description: 仅回收站 article/project；token 绑定 generation、评论线程版本、引用清单与 5 分钟有效期。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurgeImpact'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/contents/{id}/purge:
+    post:
+      operationId: purgeContent
+      summary: 彻底删除回收站内容
+      description: 重新验证影响 token；事务清理内容和评论、创建最小 tombstone 和远端删除任务。不清除 Git 历史或已有备份。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '204':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurgeContent'
+  /api/v1/admin/preview:
+    post:
+      operationId: previewMarkdown
+      summary: 预览完整修改稿的 Markdown
+      description: 只读操作，不创建版本、不发布。后端统一渲染/清洗；限长和限频。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+  /api/v1/admin/taxonomy:
+    get:
+      operationId: listAdminTaxonomy
+      summary: 查询分类标签目录
+      description: 查询分类标签目录
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - category
+          - tag
+        description: ''
+      - name: include_retired
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Taxonomies'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    post:
+      operationId: createTaxonomy
+      summary: 创建分类或标签
+      description: 分类必须区分 tech/life，标签 channel=all。空目录项不单独同步，随内容引用进入仓库。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '201':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Taxonomy'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaxonomy'
+  /api/v1/admin/taxonomy/{id}/impact:
+    post:
+      operationId: previewTaxonomyChange
+      summary: 预览改名或删除分类标签的影响
+      description: 只读；返回绑定精确变更与所有受影响内容 generation 的 5 分钟 token。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxonomyImpact'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxonomyImpactRequest'
+  /api/v1/admin/taxonomy/{id}/apply:
+    post:
+      operationId: applyTaxonomyChange
+      summary: 确认改名、迁移或移除分类标签
+      description: 验证 token 后原子派生受影响当前公开/修改稿版本；公开版只复制原公开内容，绝不发布其修改稿。retire 可迁移到同类型标签，否则移除关联，保留历史快照。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxonomyApplyResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyTaxonomyChange'
+  /api/v1/admin/comments:
+    get:
+      operationId: listAdminComments
+      summary: 查询评论和留言
+      description: 仅管理员响应含私密邮箱；state 指评论自身状态，effective_visible 还考虑根留言和文章状态。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: scope
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - article
+          - guestbook
+        description: ''
+      - name: content_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - visible
+          - hidden
+        description: ''
+      - name: thread_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminComments'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    post:
+      operationId: createOwnerComment
+      summary: 以站主身份留言或回复
+      description: author_kind=owner 由会话确定；nickname 使用公开个人名称，缺省为站主；只向当前可公开目标提交。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '201':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminComment'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOwnerComment'
+  /api/v1/admin/comments/{id}:
+    get:
+      operationId: getAdminComment
+      summary: 读取评论及管理信息
+      description: 读取评论及管理信息
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminComment'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/comments/{id}/visibility:
+    post:
+      operationId: setCommentVisibility
+      summary: 隐藏或恢复评论
+      description: CAS 校验线程 generation；根留言隐藏影响整组，恢复不改回复自身隐藏状态。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminComment'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentVisibility'
+  /api/v1/admin/comments/{id}/delete-impact:
+    get:
+      operationId: getCommentDeleteImpact
+      summary: 读取评论删除影响
+      description: 读取评论删除影响
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentImpact'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/comments/{id}/delete:
+    post:
+      operationId: deleteComment
+      summary: 删除评论或整组
+      description: 根留言删除对应线程与全部回复；删除单条回复保留其他回复，其目标 id 变 null、目标昵称快照保留。检查线程版本防止遗漏新回复。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '204':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentDelete'
+  /api/v1/admin/media:
+    get:
+      operationId: listAssets
+      summary: 查询图片及引用
+      description: 查询图片及引用
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assets'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    post:
+      operationId: uploadAsset
+      summary: 上传原始图片
+      description: JPEG/PNG/WebP，最多 10 MiB，解码像素最多 4000 万；拒绝动画及任意 SVG/HTML。按摘要去重，原图写入成功后入库；变体异步生成。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '201':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+  /api/v1/admin/media/{sha256}:
+    get:
+      operationId: getAsset
+      summary: 读取图片引用信息
+      description: 读取图片引用信息
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: sha256
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    delete:
+      operationId: deleteUnusedAsset
+      summary: 删除无引用图片
+      description: 同事务检查所有保留版本、封面、同步快照与待处理合并引用；有任一引用返回 409 ASSET_REFERENCED。物理删除失败可重试且不暴露文件。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: sha256
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '204':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+  /api/v1/admin/media/{sha256}/preview:
+    get:
+      operationId: previewPrivateAsset
+      summary: 读取私有原图
+      description: 读取私有原图
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: sha256
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync:
+    get:
+      operationId: getSyncOverview
+      summary: 读取同步概况
+      description: 读取同步概况
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncOverview'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync/reconcile:
+    post:
+      operationId: enqueueReconcile
+      summary: 主动请求仓库对账
+      description: 主动请求仓库对账
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '202':
+          description: 已排队，查询任务获得最终结果
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedJob'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+  /api/v1/admin/sync/jobs:
+    get:
+      operationId: listJobs
+      summary: 查询持久任务
+      description: 查询持久任务
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - queued
+          - running
+          - retry_wait
+          - succeeded
+          - failed
+          - conflict
+          - superseded
+        description: ''
+      - name: content_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jobs'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync/jobs/{id}:
+    get:
+      operationId: getJob
+      summary: 读取任务状态
+      description: 读取任务状态
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync/jobs/{id}/retry:
+    post:
+      operationId: retryJob
+      summary: 重试失败任务
+      description: 只允许 failed；重新比较当前 generation 和仓库 HEAD，不重放旧快照。冲突须走冲突解决，过期任务标记 superseded。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '202':
+          description: 已排队，查询任务获得最终结果
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedJob'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+  /api/v1/admin/sync/conflicts:
+    get:
+      operationId: listConflicts
+      summary: 查询同步冲突
+      description: 查询同步冲突
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PageSize'
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - open
+          - resolving
+          - resolved
+          - superseded
+        description: ''
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflicts'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync/conflicts/{id}:
+    get:
+      operationId: getConflict
+      summary: 读取基础、网站和仓库版本
+      description: 读取基础、网站和仓库版本
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/admin/sync/conflicts/{id}/resolve:
+    post:
+      operationId: resolveConflict
+      summary: 提交冲突解决意图
+      description: 先登记意图；worker fetch 并检查远端 digest/本地 generation 后才在网站应用。离线不应用；状态已变则任务失败并刷新冲突。应用后普通 push，远端再变仍产生新冲突。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '202':
+          description: 已排队，查询任务获得最终结果
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedJob'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveConflict'
+  /api/v1/admin/settings:
+    get:
+      operationId: getSiteSettings
+      summary: 读取站点配置
+      description: 读取站点配置
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    put:
+      operationId: updateSiteSettings
+      summary: 更新站点名称介绍时区
+      description: 管理设置不进入内容仓库；时区必须是合法 IANA 名称。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteSettings'
+  /api/v1/admin/repository:
+    get:
+      operationId: getRepository
+      summary: 读取仓库连接配置
+      description: 读取仓库连接配置
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters: []
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryConfig'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+    put:
+      operationId: updateRepository
+      summary: 配置仓库连接
+      description: 凭据值不进入 API；credential_ref 只能引用服务器预装别名。只允许安全的 SSH/HTTPS remote 与相对 content_dir；禁止凭据嵌入 URL、本地文件及命令扩展。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: 成功
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryConfig'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRepository'
+  /api/v1/admin/repository/check:
+    post:
+      operationId: checkRepository
+      summary: 检查仓库访问能力
+      description: 只检查连接和指定分支，不导入或写入内容；通过任务返回脱敏结果。
+      tags:
+      - 管理端
+      security:
+      - AdminSession: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CSRF'
+      responses:
+        '202':
+          description: 已排队，查询任务获得最终结果
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+              description: 本次请求标识。
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 仅幂等响应重放时返回；前端重新查询当前资源状态。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedJob'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '503':
+          $ref: '#/components/responses/Error503'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+components:
+  schemas:
+    ContentKind:
+      type: string
+      enum:
+      - article
+      - project
+      - profile
+      - skill
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z][A-Z0-9_]+$
+        message:
+          type: string
+          maxLength: 500
+        field_errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+                maxLength: 300
+            required:
+            - path
+            - message
+        request_id:
+          type: string
+        current_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        conflict_id:
+          type: string
+          format: uuid
+      required:
+      - code
+      - message
+      - field_errors
+      - request_id
+    ExpectedGeneration:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+      required:
+      - expected_generation
+    Link:
+      type: object
+      additionalProperties: false
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+      required:
+      - label
+      - url
+      description: 允许 https/http；个人公开联系链接另允许 mailto。后端校验协议。
+    TaxonomySnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - category
+          - tag
+        channel:
+          type: string
+          enum:
+          - tech
+          - life
+          - all
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        slug:
+          type: string
+          maxLength: 80
+      required:
+      - id
+      - kind
+      - channel
+      - name
+      - slug
+    AssetRef:
+      type: object
+      additionalProperties: false
+      properties:
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        alt:
+          type: string
+          maxLength: 300
+      required:
+      - sha256
+      - alt
+    TocItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        level:
+          type: integer
+          enum:
+          - 2
+          - 3
+      required:
+      - id
+      - text
+      - level
+    ArticleDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        channel:
+          anyOf:
+          - type: string
+            enum:
+            - tech
+            - life
+          - type: 'null'
+      required:
+      - channel
+    ProjectDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        role:
+          type: string
+          maxLength: 120
+        started_on:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+        ended_on:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+        featured:
+          type: boolean
+        tech_stack:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+          maxItems: 30
+      required:
+      - role
+      - started_on
+      - ended_on
+      - featured
+      - tech_stack
+    ProfileDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        location:
+          type: string
+          maxLength: 120
+        occupation:
+          type: string
+          maxLength: 120
+      required:
+      - location
+      - occupation
+    SkillDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        group_name:
+          type: string
+          maxLength: 80
+      required:
+      - group_name
+    ArticleDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: article
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          maxLength: 500
+        markdown:
+          type: string
+          maxLength: 200000
+        slug:
+          anyOf:
+          - type: string
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            maxLength: 100
+          - type: 'null'
+        display_order:
+          type: integer
+          minimum: -1000000
+          maximum: 1000000
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/AssetRef'
+          - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          maxItems: 20
+        related_content_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        body_asset_sha256s:
+          type: array
+          items:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          maxItems: 200
+        details:
+          $ref: '#/components/schemas/ArticleDetails'
+        category_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 20
+      required:
+      - kind
+      - title
+      - summary
+      - markdown
+      - slug
+      - display_order
+      - cover
+      - links
+      - related_content_ids
+      - body_asset_sha256s
+      - details
+      - category_id
+      - tag_ids
+      description: 完整替换修改稿；允许标题/摘要/正文为空。发布有额外完整性校验。未知字段拒绝，kind 不可改变。
+    ProjectDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: project
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          maxLength: 500
+        markdown:
+          type: string
+          maxLength: 200000
+        slug:
+          anyOf:
+          - type: string
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            maxLength: 100
+          - type: 'null'
+        display_order:
+          type: integer
+          minimum: -1000000
+          maximum: 1000000
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/AssetRef'
+          - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          maxItems: 20
+        related_content_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        body_asset_sha256s:
+          type: array
+          items:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          maxItems: 200
+        details:
+          $ref: '#/components/schemas/ProjectDetails'
+      required:
+      - kind
+      - title
+      - summary
+      - markdown
+      - slug
+      - display_order
+      - cover
+      - links
+      - related_content_ids
+      - body_asset_sha256s
+      - details
+      description: 完整替换修改稿；允许标题/摘要/正文为空。发布有额外完整性校验。未知字段拒绝，kind 不可改变。
+    ProfileDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: profile
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          maxLength: 500
+        markdown:
+          type: string
+          maxLength: 200000
+        slug:
+          type: 'null'
+        display_order:
+          type: integer
+          minimum: -1000000
+          maximum: 1000000
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/AssetRef'
+          - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          maxItems: 20
+        related_content_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        body_asset_sha256s:
+          type: array
+          items:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          maxItems: 200
+        details:
+          $ref: '#/components/schemas/ProfileDetails'
+      required:
+      - kind
+      - title
+      - summary
+      - markdown
+      - slug
+      - display_order
+      - cover
+      - links
+      - related_content_ids
+      - body_asset_sha256s
+      - details
+      description: 完整替换修改稿；允许标题/摘要/正文为空。发布有额外完整性校验。未知字段拒绝，kind 不可改变。
+    SkillDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: skill
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          maxLength: 500
+        markdown:
+          type: string
+          maxLength: 200000
+        slug:
+          type: 'null'
+        display_order:
+          type: integer
+          minimum: -1000000
+          maximum: 1000000
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/AssetRef'
+          - type: 'null'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          maxItems: 20
+        related_content_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        body_asset_sha256s:
+          type: array
+          items:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          maxItems: 200
+        details:
+          $ref: '#/components/schemas/SkillDetails'
+      required:
+      - kind
+      - title
+      - summary
+      - markdown
+      - slug
+      - display_order
+      - cover
+      - links
+      - related_content_ids
+      - body_asset_sha256s
+      - details
+      description: 完整替换修改稿；允许标题/摘要/正文为空。发布有额外完整性校验。未知字段拒绝，kind 不可改变。
+    ContentDraft:
+      oneOf:
+      - $ref: '#/components/schemas/ArticleDraft'
+      - $ref: '#/components/schemas/ProjectDraft'
+      - $ref: '#/components/schemas/ProfileDraft'
+      - $ref: '#/components/schemas/SkillDraft'
+      discriminator:
+        propertyName: kind
+        mapping:
+          article: '#/components/schemas/ArticleDraft'
+          project: '#/components/schemas/ProjectDraft'
+          profile: '#/components/schemas/ProfileDraft'
+          skill: '#/components/schemas/SkillDraft'
+    Revision:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        revision_no:
+          type: integer
+          minimum: 1
+        fields:
+          $ref: '#/components/schemas/ContentDraft'
+        taxonomy_snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxonomySnapshot'
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - revision_no
+      - fields
+      - taxonomy_snapshots
+      - created_at
+    SyncStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        state:
+          type: string
+          enum:
+          - pending
+          - syncing
+          - synced
+          - failed
+          - conflict
+        last_success_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        job_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        conflict_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        error_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+        error_message:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+      required:
+      - state
+      - last_success_at
+      - job_id
+      - conflict_id
+      - error_code
+      - error_message
+    AdminContent:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        lifecycle:
+          type: string
+          enum:
+          - active
+          - trash
+        visibility:
+          type: string
+          enum:
+          - unpublished
+          - published
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        published:
+          anyOf:
+          - $ref: '#/components/schemas/Revision'
+          - type: 'null'
+        draft:
+          anyOf:
+          - $ref: '#/components/schemas/Revision'
+          - type: 'null'
+        first_published_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        published_updated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        sync:
+          $ref: '#/components/schemas/SyncStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - kind
+      - lifecycle
+      - visibility
+      - generation
+      - published
+      - draft
+      - first_published_at
+      - published_updated_at
+      - sync
+      - created_at
+      - updated_at
+    AdminContentSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        title:
+          type: string
+          maxLength: 120
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        lifecycle:
+          type: string
+          enum:
+          - active
+          - trash
+        visibility:
+          type: string
+          enum:
+          - unpublished
+          - published
+        has_draft:
+          type: boolean
+        sync:
+          $ref: '#/components/schemas/SyncStatus'
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - kind
+      - title
+      - generation
+      - lifecycle
+      - visibility
+      - has_draft
+      - sync
+      - updated_at
+    CreateContent:
+      type: object
+      additionalProperties: false
+      properties:
+        draft:
+          $ref: '#/components/schemas/ContentDraft'
+      required:
+      - draft
+    SaveDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        draft:
+          $ref: '#/components/schemas/ContentDraft'
+      required:
+      - expected_generation
+      - draft
+    PublishContent:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        revision_id:
+          type: string
+          format: uuid
+        first_published_at:
+          type: string
+          format: date-time
+      required:
+      - expected_generation
+      - revision_id
+      description: revision_id 必须属于该对象；首次发布可指定不晚于当前时间的历史时间，后续禁止更改。
+    PublicAsset:
+      type: object
+      additionalProperties: false
+      properties:
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        url:
+          type: string
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        alt:
+          type: string
+          maxLength: 300
+      required:
+      - sha256
+      - url
+      - width
+      - height
+      - alt
+    RelatedLink:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        title:
+          type: string
+        url:
+          type: string
+      required:
+      - id
+      - kind
+      - title
+      - url
+    PublicCard:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          anyOf:
+          - type: string
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            maxLength: 100
+          - type: 'null'
+        canonical_path:
+          type: string
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/PublicAsset'
+          - type: 'null'
+        first_published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        display_order:
+          type: integer
+        channel:
+          anyOf:
+          - type: string
+            enum:
+            - tech
+            - life
+          - type: 'null'
+        category:
+          anyOf:
+          - $ref: '#/components/schemas/TaxonomySnapshot'
+          - type: 'null'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxonomySnapshot'
+      required:
+      - id
+      - kind
+      - title
+      - summary
+      - slug
+      - canonical_path
+      - cover
+      - first_published_at
+      - updated_at
+      - display_order
+      - channel
+      - category
+      - tags
+      description: 只来自公开版本。profile/skill 无独立详情页，canonical_path 为 /about。
+    PublicContent:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        title:
+          type: string
+        summary:
+          type: string
+        slug:
+          anyOf:
+          - type: string
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            maxLength: 100
+          - type: 'null'
+        canonical_path:
+          type: string
+        cover:
+          anyOf:
+          - $ref: '#/components/schemas/PublicAsset'
+          - type: 'null'
+        first_published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        display_order:
+          type: integer
+        channel:
+          anyOf:
+          - type: string
+            enum:
+            - tech
+            - life
+          - type: 'null'
+        category:
+          anyOf:
+          - $ref: '#/components/schemas/TaxonomySnapshot'
+          - type: 'null'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxonomySnapshot'
+        body_html:
+          type: string
+        toc:
+          type: array
+          items:
+            $ref: '#/components/schemas/TocItem'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedLink'
+        details:
+          oneOf:
+          - $ref: '#/components/schemas/ArticleDetails'
+          - $ref: '#/components/schemas/ProjectDetails'
+          - $ref: '#/components/schemas/ProfileDetails'
+          - $ref: '#/components/schemas/SkillDetails'
+      required:
+      - id
+      - kind
+      - title
+      - summary
+      - slug
+      - canonical_path
+      - cover
+      - first_published_at
+      - updated_at
+      - display_order
+      - channel
+      - category
+      - tags
+      - body_html
+      - toc
+      - links
+      - related
+      - details
+      description: 只读 DTO，不返回 markdown、generation、草稿、同步状态或私密字段；details 必须匹配 kind。
+    PublicSite:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        timezone:
+          type: string
+      required:
+      - title
+      - description
+      - timezone
+    PublicHome:
+      type: object
+      additionalProperties: false
+      properties:
+        profile:
+          anyOf:
+          - $ref: '#/components/schemas/PublicContent'
+          - type: 'null'
+        tech_articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicCard'
+          maxItems: 6
+        life_articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicCard'
+          maxItems: 6
+        featured_projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicCard'
+          maxItems: 6
+      required:
+      - profile
+      - tech_articles
+      - life_articles
+      - featured_projects
+    SitemapItem:
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - path
+      - updated_at
+    AdminIdentity:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+      required:
+      - id
+      - username
+    Session:
+      type: object
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/AdminIdentity'
+        csrf_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - user
+      - csrf_token
+      - expires_at
+    Login:
+      type: object
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 80
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+      required:
+      - username
+      - password
+    CommentTarget:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required:
+        - scope
+        - content_id
+        properties:
+          scope:
+            const: article
+          content_id:
+            type: string
+            format: uuid
+      - type: object
+        additionalProperties: false
+        required:
+        - scope
+        - content_id
+        properties:
+          scope:
+            const: guestbook
+          content_id:
+            type: 'null'
+    CreateVisitorComment:
+      type: object
+      additionalProperties: false
+      properties:
+        target:
+          $ref: '#/components/schemas/CommentTarget'
+        reply_to_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        nickname:
+          type: string
+          minLength: 1
+          maxLength: 40
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        email:
+          anyOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: 'null'
+      required:
+      - target
+      - reply_to_id
+      - nickname
+      - body
+      description: 邮箱可省略或为 null；不得提交 author_kind 或 owner 标识。
+    CreateOwnerComment:
+      type: object
+      additionalProperties: false
+      properties:
+        target:
+          $ref: '#/components/schemas/CommentTarget'
+        reply_to_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - target
+      - reply_to_id
+      - body
+    PublicComment:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        is_root:
+          type: boolean
+        reply_to_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        reply_to_nickname:
+          anyOf:
+          - type: string
+          - type: 'null'
+        nickname:
+          type: string
+        body:
+          type: string
+        author_kind:
+          type: string
+          enum:
+          - visitor
+          - owner
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - thread_id
+      - is_root
+      - reply_to_id
+      - reply_to_nickname
+      - nickname
+      - body
+      - author_kind
+      - created_at
+    PublicThread:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        root:
+          $ref: '#/components/schemas/PublicComment'
+        visible_reply_count:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - root
+      - visible_reply_count
+    AdminComment:
+      type: object
+      additionalProperties: false
+      properties:
+        comment:
+          $ref: '#/components/schemas/PublicComment'
+        state:
+          type: string
+          enum:
+          - visible
+          - hidden
+        effective_visible:
+          type: boolean
+        email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+        target:
+          $ref: '#/components/schemas/CommentTarget'
+        thread_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+      required:
+      - comment
+      - state
+      - effective_visible
+      - email
+      - target
+      - thread_generation
+    CommentVisibility:
+      type: object
+      additionalProperties: false
+      properties:
+        state:
+          type: string
+          enum:
+          - visible
+          - hidden
+        expected_thread_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+      required:
+      - state
+      - expected_thread_generation
+    CommentDelete:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_thread_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        confirm:
+          const: true
+      required:
+      - expected_thread_generation
+      - confirm
+    CommentImpact:
+      type: object
+      additionalProperties: false
+      properties:
+        comment_id:
+          type: string
+          format: uuid
+        thread_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        delete_count:
+          type: integer
+          minimum: 1
+        includes_replies:
+          type: boolean
+      required:
+      - comment_id
+      - thread_generation
+      - delete_count
+      - includes_replies
+    PurgeImpact:
+      type: object
+      additionalProperties: false
+      properties:
+        content_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        revision_count:
+          type: integer
+          minimum: 0
+        comment_count:
+          type: integer
+          minimum: 0
+        asset_reference_count:
+          type: integer
+          minimum: 0
+        impact_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - content_id
+      - generation
+      - revision_count
+      - comment_count
+      - asset_reference_count
+      - impact_token
+      - expires_at
+    PurgeContent:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        impact_token:
+          type: string
+        confirm:
+          const: true
+      required:
+      - expected_generation
+      - impact_token
+      - confirm
+    PreviewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        draft:
+          $ref: '#/components/schemas/ContentDraft'
+      required:
+      - draft
+    PreviewResult:
+      type: object
+      additionalProperties: false
+      properties:
+        body_html:
+          type: string
+        toc:
+          type: array
+          items:
+            $ref: '#/components/schemas/TocItem'
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+      - body_html
+      - toc
+      - warnings
+      description: HTML 中私有图片使用管理预览地址，不能发布到公开前端。
+    Asset:
+      type: object
+      additionalProperties: false
+      properties:
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        media_type:
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+          - image/webp
+        byte_size:
+          type: integer
+          minimum: 1
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        original_name:
+          type: string
+        preview_url:
+          type: string
+        revision_reference_count:
+          type: integer
+          minimum: 0
+        sync_reference_count:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - sha256
+      - media_type
+      - byte_size
+      - width
+      - height
+      - original_name
+      - preview_url
+      - revision_reference_count
+      - sync_reference_count
+      - created_at
+    Taxonomy:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - category
+          - tag
+        channel:
+          type: string
+          enum:
+          - tech
+          - life
+          - all
+        name:
+          type: string
+          maxLength: 40
+        slug:
+          type: string
+          maxLength: 80
+        display_order:
+          type: integer
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        retired_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - id
+      - kind
+      - channel
+      - name
+      - slug
+      - display_order
+      - generation
+      - retired_at
+    CreateTaxonomy:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+          - category
+          - tag
+        channel:
+          type: string
+          enum:
+          - tech
+          - life
+          - all
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          maxLength: 80
+        display_order:
+          type: integer
+      required:
+      - kind
+      - channel
+      - name
+      - slug
+      - display_order
+    TaxonomyChange:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          operation:
+            const: rename
+          name:
+            type: string
+            minLength: 1
+            maxLength: 40
+          slug:
+            type: string
+            pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+            maxLength: 80
+          display_order:
+            type: integer
+        required:
+        - operation
+        - name
+        - slug
+        - display_order
+      - type: object
+        additionalProperties: false
+        properties:
+          operation:
+            const: retire
+          replacement_id:
+            anyOf:
+            - type: string
+              format: uuid
+            - type: 'null'
+        required:
+        - operation
+        - replacement_id
+    TaxonomyImpactRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        change:
+          $ref: '#/components/schemas/TaxonomyChange'
+      required:
+      - expected_generation
+      - change
+    TaxonomyImpact:
+      type: object
+      additionalProperties: false
+      properties:
+        taxonomy_id:
+          type: string
+          format: uuid
+        affected_content_count:
+          type: integer
+          minimum: 0
+        published_revision_count:
+          type: integer
+          minimum: 0
+        draft_revision_count:
+          type: integer
+          minimum: 0
+        impact_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - taxonomy_id
+      - affected_content_count
+      - published_revision_count
+      - draft_revision_count
+      - impact_token
+      - expires_at
+    ApplyTaxonomyChange:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        change:
+          $ref: '#/components/schemas/TaxonomyChange'
+        impact_token:
+          type: string
+      required:
+      - expected_generation
+      - change
+      - impact_token
+    TaxonomyApplyResult:
+      type: object
+      additionalProperties: false
+      properties:
+        taxonomy:
+          $ref: '#/components/schemas/Taxonomy'
+        affected_content_count:
+          type: integer
+          minimum: 0
+        sync_job_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - taxonomy
+      - affected_content_count
+      - sync_job_ids
+    Job:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - sync_content
+          - reconcile
+          - resolve_conflict
+          - delete_remote
+          - image_variant
+          - repository_check
+          - delete_asset
+        aggregate_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+        target_generation:
+          anyOf:
+          - type: integer
+            minimum: 1
+            maximum: 9007199254740991
+          - type: 'null'
+        state:
+          type: string
+          enum:
+          - queued
+          - running
+          - retry_wait
+          - succeeded
+          - failed
+          - conflict
+          - superseded
+        attempt_count:
+          type: integer
+          minimum: 0
+        next_run_at:
+          type: string
+          format: date-time
+        error_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+        error_message:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - kind
+      - aggregate_id
+      - target_generation
+      - state
+      - attempt_count
+      - next_run_at
+      - error_code
+      - error_message
+      - created_at
+      - updated_at
+    AcceptedJob:
+      type: object
+      additionalProperties: false
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        state:
+          const: queued
+      required:
+      - job_id
+      - state
+      description: 仅代表排队；实际完成必须查询任务结果。
+    SnapshotRevision:
+      type: object
+      additionalProperties: false
+      properties:
+        fields:
+          $ref: '#/components/schemas/ContentDraft'
+        taxonomy_snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxonomySnapshot'
+      required:
+      - fields
+      - taxonomy_snapshots
+    SyncSnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        content_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ContentKind'
+        exists:
+          type: boolean
+        lifecycle:
+          anyOf:
+          - type: string
+            enum:
+            - active
+            - trash
+          - type: 'null'
+        visibility:
+          anyOf:
+          - type: string
+            enum:
+            - unpublished
+            - published
+          - type: 'null'
+        first_published_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        published:
+          anyOf:
+          - $ref: '#/components/schemas/SnapshotRevision'
+          - type: 'null'
+        draft:
+          anyOf:
+          - $ref: '#/components/schemas/SnapshotRevision'
+          - type: 'null'
+        digest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - content_id
+      - kind
+      - exists
+      - lifecycle
+      - visibility
+      - first_published_at
+      - published
+      - draft
+      - digest
+      description: exists=false 表示仓库中对象不存在，其余状态与版本为 null。B/L/R 比较包含完整两份版本与分类快照。
+    ConflictSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        content_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+          - open
+          - resolving
+          - resolved
+          - superseded
+        local_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        remote_commit:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - content_id
+      - state
+      - local_generation
+      - remote_commit
+      - created_at
+    Conflict:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        content_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+          - open
+          - resolving
+          - resolved
+          - superseded
+        local_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        remote_commit:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        base:
+          anyOf:
+          - $ref: '#/components/schemas/SyncSnapshot'
+          - type: 'null'
+        local:
+          $ref: '#/components/schemas/SyncSnapshot'
+        remote:
+          $ref: '#/components/schemas/SyncSnapshot'
+      required:
+      - id
+      - content_id
+      - state
+      - local_generation
+      - remote_commit
+      - created_at
+      - base
+      - local
+      - remote
+    ResolveConflict:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        expected_remote_digest:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        selection:
+          type: string
+          enum:
+          - local
+          - remote
+          - manual
+        action:
+          type: string
+          enum:
+          - save_draft
+          - publish
+          - withdraw
+          - trash
+        merged_draft:
+          $ref: '#/components/schemas/ContentDraft'
+      required:
+      - expected_generation
+      - expected_remote_digest
+      - selection
+      - action
+      description: manual 必须提供 merged_draft，其余 selection 禁止该字段。默认 UI 选择 save_draft，但协议必须显式提交 action。
+      allOf:
+      - if:
+          properties:
+            selection:
+              const: manual
+          required:
+          - selection
+        then:
+          required:
+          - merged_draft
+        else:
+          not:
+            required:
+            - merged_draft
+    SyncOverview:
+      type: object
+      additionalProperties: false
+      properties:
+        pending_count:
+          type: integer
+          minimum: 0
+        failed_count:
+          type: integer
+          minimum: 0
+        conflict_count:
+          type: integer
+          minimum: 0
+        last_checked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        last_success_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        repository_enabled:
+          type: boolean
+      required:
+      - pending_count
+      - failed_count
+      - conflict_count
+      - last_checked_at
+      - last_success_at
+      - repository_enabled
+    SiteSettings:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        timezone:
+          type: string
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - title
+      - description
+      - timezone
+      - generation
+      - updated_at
+    UpdateSiteSettings:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        title:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 300
+        timezone:
+          type: string
+          maxLength: 80
+      required:
+      - expected_generation
+      - title
+      - description
+      - timezone
+    RepositoryConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        generation:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        remote_url:
+          type: string
+        branch:
+          type: string
+        content_dir:
+          type: string
+        credential_ref:
+          type: string
+        enabled:
+          type: boolean
+        poll_interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+        last_checked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        last_success_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+      required:
+      - generation
+      - remote_url
+      - branch
+      - content_dir
+      - credential_ref
+      - enabled
+      - poll_interval_seconds
+      - last_checked_at
+      - last_success_at
+      description: 不含凭据值、本地路径或原始 Git 日志。
+    UpdateRepository:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_generation:
+          type: integer
+          minimum: 0
+        remote_url:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        branch:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content_dir:
+          type: string
+          minLength: 1
+          maxLength: 200
+        credential_ref:
+          type: string
+          minLength: 1
+          maxLength: 80
+        enabled:
+          type: boolean
+        poll_interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+      required:
+      - expected_generation
+      - remote_url
+      - branch
+      - content_dir
+      - credential_ref
+      - enabled
+      - poll_interval_seconds
+      description: 首次配置 expected_generation=0；已有同步基线时禁止直接换仓库/分支/目录，返回 REPOSITORY_MIGRATION_REQUIRED。
+    Dashboard:
+      type: object
+      additionalProperties: false
+      properties:
+        published_articles:
+          type: integer
+          minimum: 0
+        published_projects:
+          type: integer
+          minimum: 0
+        draft_contents:
+          type: integer
+          minimum: 0
+        trash_contents:
+          type: integer
+          minimum: 0
+        visible_comments:
+          type: integer
+          minimum: 0
+        sync:
+          $ref: '#/components/schemas/SyncOverview'
+      required:
+      - published_articles
+      - published_projects
+      - draft_contents
+      - trash_contents
+      - visible_comments
+      - sync
+    PublicCards:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicCard'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    PublicContents:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicContent'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    PublicThreads:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicThread'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    PublicReplies:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicComment'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    AdminContents:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminContentSummary'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    AdminComments:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminComment'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    Assets:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    Taxonomies:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Taxonomy'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    Jobs:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    Conflicts:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConflictSummary'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    SitemapEntries:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SitemapItem'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+    PublicTaxonomy:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - category
+          - tag
+        channel:
+          type: string
+          enum:
+          - tech
+          - life
+          - all
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        slug:
+          type: string
+          maxLength: 80
+        article_count:
+          type: integer
+          minimum: 1
+      required:
+      - id
+      - kind
+      - channel
+      - name
+      - slug
+      - article_count
+    PublicTaxonomies:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicTaxonomy'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - page_size
+      - total
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 一次业务提交生成一个 UUID；重试复用。有效期 24 小时，同键不同载荷返回 409。
+    CSRF:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+      description: 由会话接口取得；所有已认证写操作必须提供。
+  responses:
+    Error400:
+      description: 无效 JSON、参数或请求格式
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error401:
+      description: 未登录或会话失效
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error403:
+      description: 无权限、来源或 CSRF 校验失败
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error404:
+      description: 对象不存在或当前不可公开
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error409:
+      description: 版本、幂等、状态或引用冲突
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error413:
+      description: 请求或上传超出限制
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error415:
+      description: 媒体或内容类型不支持
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error422:
+      description: 字段或业务规则校验失败
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error429:
+      description: 超过限频，按 Retry-After 重试
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: 建议等待秒数
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error503:
+      description: 服务暂不可用，不能按空列表处理
+      headers:
+        X-Request-ID:
+          schema:
+            type: string
+          description: 本次请求标识。
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    AdminSession:
+      type: apiKey
+      in: cookie
+      name: __Host-site_session
+      description: HttpOnly Secure SameSite=Lax Path=/；管理写操作另需 X-CSRF-Token。
