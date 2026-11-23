@@ -10,7 +10,7 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 from openapi_spec_validator import validate
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SQL = (ROOT / 'backend/migrations/00001_initial.sql').read_text()
 SPEC = yaml.safe_load((ROOT / 'contracts/openapi.yaml').read_text())
 

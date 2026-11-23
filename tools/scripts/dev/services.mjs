@@ -6,7 +6,7 @@ import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 // 源码由各自 Git 子模块管理；运行数据始终只写根仓库 var。
 export const frontendRoot = path.join(root, 'frontend')
 export const backendRoot = path.join(root, 'backend')
@@ -90,7 +90,8 @@ function assertOwned() {
 
 export function config() {
   assertOwned()
-  if (!fs.existsSync(marker) || !fs.existsSync(configFile)) throw new Error('请先执行 dev:prepare')
+  if (!fs.existsSync(marker) || !fs.existsSync(configFile))
+    throw new Error('请先执行 ./dev prepare 或 ./dev up')
   return JSON.parse(fs.readFileSync(configFile, 'utf8'))
 }
 
@@ -316,7 +317,10 @@ export function prepare() {
   }
 }
 
-export function request(urlPath, { method = 'GET', headers = {}, body, c = config() } = {}) {
+export function request(
+  urlPath,
+  { method = 'GET', headers = {}, body, c = config(), signal: abortSignal, timeout = 10000 } = {},
+) {
   return new Promise((resolve, reject) => {
     // 客户端只信任本次运行的 CA；禁止关闭 TLS 校验。
     const req = https.request(
@@ -326,7 +330,9 @@ export function request(urlPath, { method = 'GET', headers = {}, body, c = confi
         headers,
         ca: fs.readFileSync(path.join(runDir, 'certs/ca.pem')),
         family: 4,
-        timeout: 10000,
+        // 自动验收显式传入 5 秒超时和取消信号；普通联调保留原来的 10 秒默认值。
+        timeout,
+        signal: abortSignal,
       },
       (res) => {
         const chunks = []
@@ -582,13 +588,18 @@ async function serve(runId) {
   }
 }
 
-export async function up() {
+export async function up({ signal: abortSignal } = {}) {
+  abortSignal?.throwIfAborted()
   const c = config()
   const runId = acquireLock('up')
   let supervisor
   try {
     if (state()) throw new Error('存在未清理的旧运行状态，请先执行 dev:down')
-    for (const port of [c.apiPort, c.webPort, c.adminPort, c.httpsPort]) await available(port)
+    for (const port of [c.apiPort, c.webPort, c.adminPort, c.httpsPort]) {
+      abortSignal?.throwIfAborted()
+      await available(port)
+    }
+    abortSignal?.throwIfAborted()
     const logPath = path.join(runDir, 'logs/supervisor.log')
     assertNoLinks(logPath)
     const log = fs.openSync(logPath, 'a', 0o600)
@@ -611,15 +622,18 @@ export async function up() {
     child.unref()
     const deadline = Date.now() + 120000
     while (Date.now() < deadline) {
+      // 测试信号中断要走下方已有的 run_id 清理，不能遗留 detached 监督进程。
+      abortSignal?.throwIfAborted()
       if (!alive(supervisor)) throw new Error('服务提前退出，请查看本地日志')
       if (state()?.runId && state().runId !== runId)
         throw new Error('运行状态已变化，停止当前启动检查')
       try {
         const responses = await Promise.all([
-          request('/api/v1/public/site'),
-          request('/'),
-          request('/admin/login'),
+          request('/api/v1/public/site', { signal: abortSignal, timeout: 5000 }),
+          request('/', { signal: abortSignal, timeout: 5000 }),
+          request('/admin/login', { signal: abortSignal, timeout: 5000 }),
         ])
+        abortSignal?.throwIfAborted()
         if (responses.every((res) => res.status === 200) && alive(supervisor)) {
           console.log(
             `Local: ${c.origin}；管理端：${c.origin}/admin/；日志：${path.join(runDir, 'logs')}`,
@@ -627,6 +641,7 @@ export async function up() {
           return
         }
       } catch {
+        abortSignal?.throwIfAborted()
         /* 首次编译期间等待有期限的就绪检查，不把进程启动等同就绪。 */
       }
       await delay(500)
@@ -688,7 +703,7 @@ async function main(command) {
       ),
     )
   } else if (command === 'doctor') {
-    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'toolchain.json'), 'utf8'))
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'tools/toolchain.json'), 'utf8'))
     for (const [name, executable, args] of [
       ['node', 'node/bin/node', ['--version']],
       ['go', 'go/bin/go', ['version']],

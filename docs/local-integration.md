@@ -1,6 +1,6 @@
 # 本地服务联调规范
 
-版本：1.2；日期：2026-11-23。适用于[开发计划](development-plan.md) P1–P7。P1 的工程、站主认证及 HTTPS 环境已实现并验证，见[本地开发说明](development/p1-local.md)及[实际记录](verification/P1-2026-11-17.md)。下文保留全阶段目标，内容、Git 同步、评论、生产替换与恢复矩阵按后续阶段验收。
+版本：1.3；日期：2026-11-23。适用于[开发计划](development-plan.md) P1–P7。P1 的工程、站主认证及 HTTPS 环境已实现并验证，见[本地开发说明](development/p1-local.md)及[实际记录](verification/P1-2026-11-17.md)。下文保留全阶段目标，内容、Git 同步、评论、生产替换与恢复矩阵按后续阶段验收。
 
 ## 1 服务拓扑与数据隔离
 
@@ -41,22 +41,29 @@ flowchart LR
 
 ## 3 命令入口与实施状态
 
-下列入口除 `test:release` 外均已在 P1 实现，从项目根目录使用 `sh scripts/dev/with-tools.sh pnpm <命令>` 执行。功能覆盖随阶段扩展：P1 的 prepare 只创建站点设置、测试站主、证书与 bare remote，不生成业务内容；integration 只验证站点和认证。安装依赖见本地开发说明。
+当前从项目根目录通过 `./dev` 调用。联调实现、跨服务测试、Node 配置和工具锁文件集中在 `tools/`；根目录不保留 `package.json`、pnpm 锁或依赖目录。P1 功能和历史验证范围不变，本轮新入口及共享验收流程需另记实际执行结果。
 
-| 命令 | 动作与覆盖范围 |
+| 命令 | 行为 |
 | --- | --- |
-| `pnpm dev:doctor` | 检查锁定工具及 Git/OpenSSL 版本；端口由 up 检查，SQLite 与 schema 由 prepare/CLI 诊断，不静默升级全局工具 |
-| `pnpm dev:prepare` | 为明确的本地运行目录执行 Goose 迁移、初始化站点与测试账号、准备 bare remote 与证书；只操作带项目标识的目标，重复执行不重置已有数据 |
-| `pnpm dev:up` | 启动本次 Nuxt、Vite、Go、HTTPS 代理；记录 PID/日志，等待就绪；失败清理本次创建的进程 |
-| `pnpm dev:status` | 输出实际入口、端口、健康状态和日志位置，不输出凭据 |
-| `pnpm dev:down` | 只停止当前运行记录所属的进程；保留数据；不能用宽泛的进程名匹配停止其他项目 |
-| `pnpm check` | 格式/lint、类型、Go vet、合同和生成产物一致性；可按变更路径执行子任务 |
-| `pnpm test:integration` | 在独立目录启动 Go/SQLite、Nuxt、Vite 与 HTTPS 代理，准备 bare remote，执行真实 HTTP 认证用例；后台任务与 Git 往返在后续阶段加入 |
-| `pnpm test:e2e` | 启动完整本地 HTTPS 服务，由 Playwright 驱动匿名/站主浏览器流程；关闭请求 mock |
-| `pnpm build` | 分别构建公开站、管理端、Go 产物，允许各自单独构建 |
-| `pnpm test:release`（P7 待实现） | 使用生产构建与本地代理复跑关键路径、兼容前端替换、备份恢复，不向外部发布 |
+| `./dev install` | 私有工具 bootstrap，冻结安装工具和前端依赖，准备 Python 环境和 Firefox；系统依赖显式安装 |
+| `./dev doctor` | 检查锁定工具及 Git/OpenSSL 版本；不静默升级全局工具 |
+| `./dev up` | 构建 Go、显式准备目标数据库和证书，再启动 Nuxt、Vite、Go、HTTPS 代理；记录 PID/日志并等待就绪 |
+| `./dev status` | 输出实际入口、端口、健康状态和日志位置，不输出凭据 |
+| `./dev down` | 只停止当前运行标识所属进程，保留数据；不按宽泛进程名清理 |
+| `./dev check` | 格式/lint、类型、Go vet、合同、子模块和生成产物一致性 |
+| `./dev test` | 前端单元、Go race 及服务编排故障用例 |
+| `./dev integration` | 独立运行目录中执行真实 HTTPS/SQLite/CLI 认证套件 |
+| `./dev e2e` | 独立真实服务栈上的 Firefox 匿名/站主流程，无请求 mock |
+| `./dev acceptance` | 一次启动真实服务，先浏览器、恢复测试口令和会话，再执行 HTTP 套件；分别输出和汇总结果 |
+| `./dev verify` | 检查、单元/race、各端构建、编排故障和共享真实栈验收；避免套件重复构建、启动 |
+| `./dev build` / `./dev build web\|admin\|api` | 全部或指定产物独立构建 |
+| `./dev workspace --locked` | 核对子模块干净及根索引固定指针 |
 
-根仓库命令可以编排前端、Go 和 Python 工具；前端子模块的检查与构建不依赖 Go，后端子模块不依赖 Node。根脚本明确使用 `frontend/`、`backend/` 路径，不能将后端构建绑定到前端产物。迁移由显式准备/部署步骤执行，应用启动只检查 schema，不自动修改真实运行库。
+`test:release` 仍为 P7 待实现的生产产物替换与恢复验收，不能由上述开发服务套件代替。P1 的准备步骤只创建站点设置、测试站主、证书及 bare remote，不生成内容夹具或执行内容同步。
+
+`tools/` 可以编排前端、Go 和 Python 工具；前端子模块检查与构建不依赖 Go，后端子模块不依赖 Node。高级任务用 `./dev exec <命令>` 选择私有工具链。脚本明确定位 `frontend/`、`backend/`，不能将后端构建绑定到前端产物。迁移由显式准备/部署步骤执行，应用启动只检查 schema，不自动修改真实运行库。
+
+共享验收每轮仍使用全新的 `var/test/<run-id>/` 和四个动态端口，不接管 `var/local/`。浏览器套件先执行，套件间通过 CLI 恢复测试口令并清除会话，限频负例置于 HTTP 套件末尾。单个套件失败立即停止本轮服务，保留对应日志和部分结果；总结果不能只因另一套通过而标为通过。
 
 健康检查区分进程存活与就绪。内部探针由 P1 实现且不经公开代理暴露；数据库/schema/资源目录异常影响就绪，Git 远端不可用只影响同步状态，不导致整个公开站不可用。脚本使用有期限的就绪轮询，不用固定长时间 sleep 代替。
 

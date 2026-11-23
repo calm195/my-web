@@ -3,7 +3,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 function git(args, cwd = root) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: 10000 })
   if (result.error) throw result.error

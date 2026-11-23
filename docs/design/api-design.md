@@ -190,6 +190,6 @@ sequenceDiagram
 
 ## 10 合同验证与后续实现
 
-`scripts/validate_design.py` 检查 OpenAPI 结构、请求正反例、管理鉴权声明、CSRF、幂等标记及公开响应字段。它不证明运行时 handler 已实现合同；开发后必须增加实际 HTTP 请求验证，特别是 HTTP 状态、Cookie、跨源策略和所有业务错误码。
+`tools/scripts/validate_design.py` 检查 OpenAPI 结构、请求正反例、管理鉴权声明、CSRF、幂等标记及公开响应字段。它不证明运行时 handler 已实现合同；开发后必须增加实际 HTTP 请求验证，特别是 HTTP 状态、Cookie、跨源策略和所有业务错误码。
 
 前端类型生成采用 OpenAPI 为唯一来源，生成文件不得手改。首次脚手架阶段核验 `openapi-typescript` 与本合同的条件 schema 兼容性；生成的静态类型不替代后端运行时校验。所有新 API 变更通过兼容检查后才能独立发布。

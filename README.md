@@ -8,7 +8,9 @@
 
 ```text
 contracts/、docs/          # 根仓库：唯一合同与文档
-scripts/、tests/、deploy/  # 根仓库：联调、验证与部署配置
+dev                       # 唯一开发与验收入口
+tools/                    # 联调脚本、测试、工具配置及独立依赖锁
+deploy/                   # 部署与本地 HTTPS 配置
 frontend/                 # 子模块：apps/web、apps/admin、packages
 backend/                  # 子模块：cmd、internal、migrations
 var/                      # 忽略的运行数据、本地工具和测试证据
@@ -18,17 +20,18 @@ var/                      # 忽略的运行数据、本地工具和测试证据
 
 ## 本地开发
 
-首次安装、启动及停止方法见 [P1 本地开发说明](docs/development/p1-local.md)，实际环境、命令与结果见 [P1 验证记录](docs/verification/P1-2026-11-17.md)。工具链固定在项目内，不依赖全局 pnpm；默认入口为 `https://localhost:8443`，管理端为 `/admin/`。
+根目录通过 `./dev` 统一操作，Node 工具配置、锁文件和依赖集中在 `tools/`；根目录不再放置 `package.json`、pnpm 锁文件或 `node_modules`。首次安装、启动及停止方法见 [P1 本地开发说明](docs/development/p1-local.md)，实际环境、命令与结果见 [P1 验证记录](docs/verification/P1-2026-11-17.md)。工具链固定在项目内，不依赖全局 pnpm；默认入口为 `https://localhost:8443`，管理端为 `/admin/`。
 
-完成首次安装后执行：
+首次安装并启动：
 
 ```sh
-sh scripts/dev/with-tools.sh pnpm build:api
-sh scripts/dev/with-tools.sh pnpm dev:prepare
-sh scripts/dev/with-tools.sh pnpm dev:up
+./dev install
+./dev up
 ```
 
-本地账号保存在被忽略的 `var/local/credentials.json`；证书信任方法见开发说明。结束时执行 `sh scripts/dev/with-tools.sh pnpm dev:down`。
+`./dev check` 执行日常检查，`./dev verify` 执行完整验收。完整验收在检查、单元/race、构建和编排故障测试后只启动一套真实服务，顺序执行浏览器及 HTTP 套件；本轮入口调整的实际结果由新的验收记录补充。
+
+本地账号保存在被忽略的 `var/local/credentials.json`；证书信任方法见开发说明。结束时执行 `./dev down`。
 
 ## 直接体验
 

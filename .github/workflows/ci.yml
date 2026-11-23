@@ -18,19 +18,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libnss3-tools openssl python3-venv
-          python3 scripts/dev/bootstrap.py
-      - name: Install locked dependencies
+      - name: Install locked project tools and dependencies
         run: |
-          sh scripts/dev/with-tools.sh pnpm install:all
-          python3 -m venv var/venv
-          var/venv/bin/pip install -r scripts/design-requirements.txt
-          PLAYWRIGHT_BROWSERS_PATH=var/cache/playwright sh scripts/dev/with-tools.sh pnpm exec playwright install --with-deps firefox
-      - name: Check, test and build independently
-        run: |
-          sh scripts/dev/with-tools.sh pnpm check
-          sh scripts/dev/with-tools.sh pnpm test
-          sh scripts/dev/with-tools.sh pnpm build
-      - name: Real local HTTPS integration
-        run: |
-          sh scripts/dev/with-tools.sh pnpm test:integration
-          sh scripts/dev/with-tools.sh pnpm test:e2e
+          ./dev install
+          ./dev exec pnpm --dir tools exec playwright install-deps firefox
+      - name: Check, build and verify real HTTPS once
+        run: ./dev verify

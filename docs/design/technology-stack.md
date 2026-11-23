@@ -13,7 +13,7 @@
 | 状态管理 | Nuxt `useState` / `useAsyncData`；管理端 composable | 局部表单归组件；会话与全局提示集中管理；首版不加通用全局 Store 库 |
 | HTTP 客户端 | 原生 fetch 封装、OpenAPI 生成的 TypeScript 类型 | Nuxt SSR 取数经 `useAsyncData`；管理端使用统一错误与重试规则 |
 | 前端运行时 | Node 24 LTS | 公开前端常驻；开发与 CI 使用同一精确补丁版本 |
-| 前端包管理 | pnpm workspace | 前端子模块一个锁文件，根编排另有锁文件；Nuxt 自己管理其构建器依赖，不强制覆盖为管理端 Vite 版本 |
+| 前端包管理 | pnpm workspace | 前端子模块一个锁文件，`tools/` 联调工具另有锁文件；Nuxt 自己管理其构建器依赖，不强制覆盖为管理端 Vite 版本 |
 | 后端语言 | Go 1.27，初始化基线 1.27.4 | `net/http`、`database/sql`、`log/slog`；模块化单体 |
 | 数据库 | SQLite 3、`modernc.org/sqlite` | 无 CGo 驱动；WAL、STRICT 表、外键、短写事务；不使用大型 ORM |
 | 数据库迁移 | `github.com/pressly/goose/v3` | SQL 迁移，发布前单独执行，应用只检查 schema 版本 |
@@ -41,15 +41,18 @@ Nuxt 默认支持服务端渲染；Node 官方将 24 列为 LTS，本项目选�
 
 ## 3 应用代码仓库
 
-根仓库统一维护合同、文档、编排、跨服务验证与部署配置；前端和后端分别为独立 Git 仓库，以子模块纳入根仓库。三个仓库主分支均为 `main`。一个根提交固定合同和两个子模块提交；不使用额外的版本组合清单，不自动跟随子模块分支。
+根仓库统一维护合同、文档、编排、跨服务验证与部署配置。联调实现及 Node 配置集中于 `tools/`，根目录通过 `dev` 调用；前端和后端分别为独立 Git 仓库，以子模块纳入根仓库。三个仓库主分支均为 `main`。一个根提交固定合同和两个子模块提交；不使用额外的版本组合清单，不自动跟随子模块分支。
 
 ```text
 .gitmodules                # 前后端子模块地址与路径
 AGENTS.md                  # 公共开发和协作规范
 contracts/                 # 唯一 OpenAPI、内容 schema 与正反例
 docs/                      # 唯一需求、设计、开发计划与验收记录
-scripts/                   # 合同/字典生成、开发编排与跨仓库检查
-tests/                     # 跨进程集成与真实浏览器用例
+dev                        # 根目录唯一开发与验收命令入口
+tools/                     # 联调工程，含独立 package.json 与锁文件
+  scripts/                 # 合同/字典生成、服务编排与跨仓库检查
+  tests/                   # 跨进程集成与真实浏览器用例
+  toolchain.json           # 工具版本、发行物及校验摘要
 deploy/                    # Caddy、systemd、环境变量示例
 frontend/                  # 独立 Git 子模块
   AGENTS.md                # 前端补充规范，引用根规则
@@ -78,7 +81,7 @@ P1 已建立 `frontend/apps/web`、`frontend/apps/admin`、`frontend/packages/ap
 
 根仓库地址为 `git@github.com:calm195/my-web.git`；两个子模块地址分别为 `git@github.com:calm195/my-web-frontend.git`、`git@github.com:calm195/my-web-backend.git`。本轮尚未推送这些新提交，递归检出验证使用本地镜像和仅对该命令生效的 URL 映射，不修改全局 Git 配置。私有内容同步仓库另行配置，不与应用子模块混用。
 
-完整目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见根 `toolchain.json`，依赖以各仓库锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
+完整目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见 `tools/toolchain.json`，依赖以各仓库锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
 
 ## 4 模块依赖
 

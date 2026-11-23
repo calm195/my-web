@@ -13,7 +13,7 @@ import tarfile
 import tempfile
 import urllib.request
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DEST = ROOT / 'var/toolchain'
 
 
@@ -95,7 +95,7 @@ def install_locked(name, artifact, version):
 
 def main():
     """只选择明确锁定的平台，未验证的平台不能偷偷换版本。"""
-    manifest = json.loads((ROOT / 'toolchain.json').read_text())
+    manifest = json.loads((ROOT / 'tools/toolchain.json').read_text())
     machine = {'aarch64': 'arm64', 'x86_64': 'x64'}.get(platform.machine(), platform.machine())
     key = platform.system().lower() + '-' + machine
     if key not in manifest['platforms']:

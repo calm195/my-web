@@ -1,5 +1,5 @@
 packages: []
 engineStrict: true
 saveExact: true
-storeDir: var/cache/pnpm-store
+storeDir: ../var/cache/pnpm-store
 minimumReleaseAgeStrict: true

@@ -6,16 +6,17 @@
 
 ## 1 可重复运行
 
-从项目根目录执行，在独立环境安装仅用于设计验证的 Python 工具：
+当前从项目根目录执行。`./dev install` 安装私有工具与隔离 Python 环境；首次安装也包含开发和浏览器测试依赖。只做设计验证时可按 `tools/scripts/design-requirements.txt` 单独准备 `var/venv`：
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r scripts/design-requirements.txt
-.venv/bin/python scripts/render_design_references.py
-.venv/bin/python scripts/validate_design.py
+./dev install
+./dev exec var/venv/bin/python tools/scripts/render_design_references.py
+./dev exec var/venv/bin/python tools/scripts/validate_design.py
 ```
 
 字段字典来自迁移和渲染脚本中的中文说明；API 操作目录来自 OpenAPI。修改 SQL 或合同后重新生成参考表，不手工维护一份容易漂移的接口清单。
+
+2026-11-23 路径更新：脚本已集中到 `tools/scripts/`。下列“已执行范围”保留原日期的验证结果；新入口与编排的通过情况需另见本轮实际验收记录。
 
 ## 2 已执行范围
 

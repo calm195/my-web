@@ -8,8 +8,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const service = path.join(root, 'scripts/dev/services.mjs')
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+const service = path.join(root, 'tools/scripts/dev/services.mjs')
 const node = process.execPath
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -256,7 +256,7 @@ if (old / 'keep').read_text() != 'old-tool': raise RuntimeError('未恢复上次
 `
   const result = spawnSync(
     'python3',
-    ['-O', '-c', code, directory, path.join(root, 'scripts/dev/bootstrap.py')],
+    ['-O', '-c', code, directory, path.join(root, 'tools/scripts/dev/bootstrap.py')],
     { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, timeout: 10000 },
   )
   assert.equal(result.status, 0, result.stderr)

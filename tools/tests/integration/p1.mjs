@@ -1,25 +1,26 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { environment } from '../../scripts/test/environment.mjs'
 
-const s = await environment('integration')
-let checks = 0
-const checked = (name) => {
-  checks++
-  console.log(`通过：${name}`)
-}
-const json = (r) => JSON.parse(r.text)
-const cookie = (r) => r.headers['set-cookie'][0].split(';')[0]
-const send = (method, pathname, body, extra = {}) =>
-  s.request(pathname, {
-    method,
-    headers: { Origin: s.c.origin, 'Content-Type': 'application/json', ...extra },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-const sessionPath = '/api/v1/admin/session'
+// runIntegration 使用调用者持有的真实 HTTPS 环境；生命周期由入口统一负责。
+export async function runIntegration(s, signal = s.signal) {
+  signal?.throwIfAborted()
+  let checks = 0
+  const checked = (name) => {
+    signal?.throwIfAborted()
+    checks++
+    console.log(`通过：${name}`)
+  }
+  const json = (r) => JSON.parse(r.text)
+  const cookie = (r) => r.headers['set-cookie'][0].split(';')[0]
+  const send = (method, pathname, body, extra = {}) =>
+    s.request(pathname, {
+      method,
+      headers: { Origin: s.c.origin, 'Content-Type': 'application/json', ...extra },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  const sessionPath = '/api/v1/admin/session'
 
-try {
   const site = await s.request('/api/v1/public/site')
   assert.equal(site.status, 200)
   assert.deepEqual(Object.keys(json(site)).sort(), ['description', 'timezone', 'title'])
@@ -143,15 +144,8 @@ try {
       assert.ok(!text.includes(secret), '日志不得包含凭据')
   }
   checked(`Go 实际 SQLite ${diagnostic.sqlite_version} 配置与日志脱敏`)
-  fs.writeFileSync(
-    path.join(s.runDir, 'result.json'),
-    JSON.stringify(
-      { status: 'passed', checks, sqlite: diagnostic.sqlite_version, origin: s.c.origin },
-      null,
-      2,
-    ),
-  )
+  const result = { status: 'passed', checks, sqlite: diagnostic.sqlite_version, origin: s.c.origin }
+  fs.writeFileSync(path.join(s.runDir, 'integration-result.json'), JSON.stringify(result, null, 2))
   console.log(`HTTPS 联调 ${checks} 组通过，证据目录：${s.runDir}`)
-} finally {
-  await s.down()
+  return result
 }

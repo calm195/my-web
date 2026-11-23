@@ -1,6 +1,6 @@
 # 仓库与编码规范
 
-适用于个人网站的应用代码、API 合同、数据库迁移和设计文档。首版采用 Nuxt / Vue / Go 前后端分离；技术边界见[技术栈](docs/design/technology-stack.md)，完整目标目录与代理工作规则见 [AGENTS.md](AGENTS.md)。2026-11-23 更新为根仓库与前后端 Git 子模块协作规则；远程保护规则和远程 CI 执行状态须另行核验。
+适用于个人网站的应用代码、API 合同、数据库迁移和设计文档。首版采用 Nuxt / Vue / Go 前后端分离；技术边界见[技术栈](docs/design/technology-stack.md)，完整目标目录与代理工作规则见 [AGENTS.md](AGENTS.md)。2026-11-23 更新为根仓库、前后端 Git 子模块和 `tools/` 联调工具协作规则；远程保护规则和远程 CI 执行状态须另行核验。
 
 ## 1 分支与提交
 
@@ -93,11 +93,11 @@ SQL 迁移在部署维护步骤中由 Goose 执行，应用启动仅检查版本
 | 跨模块功能 | 按[本地联调规范](docs/local-integration.md)使用真实 HTTPS、前后端、SQLite 和 Git 验证；不以 mock、原型或单模块结果代替 |
 | 部署 | 健康检查、兼容旧前端、备份恢复、撤回后的缓存访问边界 |
 
-P1 已提供 `pnpm check`、`pnpm test`、三端独立构建及 HTTPS/浏览器联调入口，使用项目工具链执行，安装与完整命令见[本地开发说明](docs/development/p1-local.md)。实际通过范围见 [P1 验证记录](docs/verification/P1-2026-11-17.md)，设计约束检查见[验证说明](docs/design/validation.md)。内容与同步等后续能力需在实现后另行验收。
+P1 已提供检查、三端独立构建及 HTTPS/浏览器联调能力。当前从根目录使用 `./dev check`、`./dev test`、`./dev build`；完整验收使用 `./dev verify`，安装与完整命令见[本地开发说明](docs/development/p1-local.md)。实际通过范围见 [P1 验证记录](docs/verification/P1-2026-11-17.md)，设计约束检查见[验证说明](docs/design/validation.md)。内容与同步等后续能力需在实现后另行验收。
 
 ## 7 依赖和本地配置
 
-- 后端提交 `go.mod/go.sum`；根仓库和前端子模块各自提交 `package.json`、`pnpm-lock.yaml`，分别冻结安装。根目录 Node 依赖只服务编排和跨服务测试，前端依赖留在前端子模块；后端独立检查与构建不依赖 Node。新增依赖说明用途，避免为一次简单操作引入完整框架。
+- 后端提交 `go.mod/go.sum`；`tools/` 和前端子模块各自提交 `package.json`、`pnpm-lock.yaml`，由 `./dev install` 分别冻结安装。联调 Node 依赖、包管理与格式配置都放在 `tools/`；根目录只保留 `dev` 入口和跨仓库公共配置。前端依赖留在前端子模块，后端独立检查与构建不依赖 Node。新增依赖说明用途，避免为一次简单操作引入完整框架。
 - `.env.example` 只含占位符；真实密钥通过部署环境注入，前端公共配置严禁包含密钥。
 - 固定 Node、pnpm、Go 的精确版本；不使用全局安装状况代替工程声明。
 - 改动原型或设计图不自动发布生产站点；应用部署需走其独立发布流程。

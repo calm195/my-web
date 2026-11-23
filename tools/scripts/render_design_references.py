@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 import yaml
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 TABLES = {
     'admin_users': '唯一站主账号；不参与内容同步。',
     'sessions': '服务端会话，仅存 token 和 CSRF 的摘要。',
@@ -159,7 +159,7 @@ def render():
     db.execute('PRAGMA foreign_keys=ON')
     db.executescript((ROOT / 'backend/migrations/00001_initial.sql').read_text())
     lines = ['# 数据库逐表字典', '',
-             '版本：1.0，2026-11-15。由建表脚本和 `scripts/render_design_references.py` 的字段说明生成。', '',
+             '版本：1.0，2026-11-15。由建表脚本和 `tools/scripts/render_design_references.py` 的字段说明生成。', '',
              '类型、空值、默认值、主外键和索引取自实际 SQLite schema；CHECK、trigger 及跨表事务规则分别见 [SQL](../../backend/migrations/00001_initial.sql) 和 [数据库设计](database-design.md)。', '',
              '所有时间字段均为 UTC Unix 毫秒；API 转 RFC3339。所有表为 STRICT，所有写连接必须启用外键。', '']
     for number, (table, description) in enumerate(TABLES.items(), 1):

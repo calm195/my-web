@@ -1,6 +1,6 @@
 # 数据库逐表字典
 
-版本：1.0，2026-11-15。由建表脚本和 `scripts/render_design_references.py` 的字段说明生成。
+版本：1.0，2026-11-15。由建表脚本和 `tools/scripts/render_design_references.py` 的字段说明生成。
 
 类型、空值、默认值、主外键和索引取自实际 SQLite schema；CHECK、trigger 及跨表事务规则分别见 [SQL](../../backend/migrations/00001_initial.sql) 和 [数据库设计](database-design.md)。
 
