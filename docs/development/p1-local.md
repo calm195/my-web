@@ -104,3 +104,5 @@ sh scripts/dev/with-tools.sh pnpm test:e2e
 Firefox 测试还将 `MOZ_APP_DATA` 和 `MOZ_LOCAL_APP_DATA` 指向本次运行目录，避免启动时触及用户已有的 Firefox 数据；这与 profile 隔离同时使用，不关闭浏览器沙箱或 TLS 校验。[Mozilla 独立测试目录说明](https://bugzilla.mozilla.org/show_bug.cgi?id=2078511)
 
 版本与配置依据：[Node 发布周期](https://nodejs.org/en/about/previous-releases)、[Go 官方发行物](https://go.dev/dl/)、[Nuxt 4 安装要求](https://nuxt.com/docs/4.x/getting-started/installation)、[pnpm 配置迁移](https://pnpm.io/migration)、[Caddy 延迟设置响应头](https://caddyserver.com/docs/caddyfile/directives/header)。具体本地结果见[P1 验证记录](../verification/P1-2026-11-17.md)。
+
+2026-11-23 子模块结构与联调回归结果见[拆分验收记录](../verification/submodules-2026-11-23.md)。
