@@ -6,6 +6,7 @@
 
 - 按用户当前明确的任务范围工作。用户允许启动子代理完成开发；只请求计划或评审时，交付计划或评审，不把它解释为已经授权发布生产服务。
 - 开工先检查实际文件、工作区改动、分支、运行进程和工具版本。保留用户及其他代理的未提交修改，不重置、覆盖或清理不属于本任务的文件。
+- 开发阶段编号和任务进度只在根仓库的[开发计划](docs/development-plan.md)与历史验收记录中维护。三个仓库的日常文档和代码注释按功能、约束及实际验证范围表述。
 - 产品行为以[需求基线](docs/personal-website-requirements.md)为准；接口以 [OpenAPI](contracts/openapi.yaml) 为准；数据库结构以 `backend/migrations/` 为准；事务与服务层不变量以[数据库设计](docs/design/database-design.md)为准。
 - 同时遵循[编码规范](CONTRIBUTING.md)、[前后端交互规则](docs/design/interaction-contract.md)、[开发计划](docs/development-plan.md)及[本地联调规范](docs/local-integration.md)。发现矛盾时先定位来源，修改合同及关联实现，不用临时兼容代码掩盖矛盾。
 - 状态必须区分：计划、已实现、设计检查通过、本地联调通过、生产验证通过。不得把原型、mock、SQL 静态检查或某个子代理的结论当成全链路通过。
@@ -118,7 +119,7 @@ prototype/                        # 既有独立原型仓库，不并入源码
 - 已应用迁移不得改写；结构变化新增迁移。OpenAPI 变化同步类型、样例、API 说明与相关测试；生成字典用现有生成脚本更新。
 - 一个任务完成需满足：实现与合同一致；中文注释到位；相关检查通过；本地行为有可复现记录；文档/生成产物同步；无未说明的失败或遗留服务。
 - 验证记录放 `docs/verification/`，写明时间、版本/提交或文件范围、工具链、命令、数据规模、结果、日志位置、剩余限制；只记录实际执行的内容。
-- P1 已建立检查、测试、构建及本地 HTTPS 脚本，使用项目工具入口 `./dev <命令>`；安装及用法见 [P1 本地开发说明](docs/development/p1-local.md)。`./dev check` 包含设计验证；`./dev test` 包含单元、Go race 和编排故障测试；`./dev integration`、`./dev e2e` 可分别运行真实服务测试。`./dev verify` 完整检查、测试、独立构建后，只启动一次隔离真实服务执行浏览器及 HTTP 验收。后续阶段按真实实现扩展，不能把 P1 通过视为内容、同步或生产验收通过。
+- 检查、测试、构建及本地 HTTPS 联调使用项目入口 `./dev <命令>`；安装及用法见 [本地开发说明](docs/development/local-development.md)。`./dev check` 包含设计验证；`./dev test` 包含单元、Go race 和编排故障测试；`./dev integration`、`./dev e2e` 可分别运行真实服务测试。`./dev verify` 完整检查、测试、独立构建后，只启动一次隔离真实服务执行浏览器及 HTTP 验收。内容发布、同步和生产部署按各自用例独立验收。
 
 ## 9 子模块与共享合同
 

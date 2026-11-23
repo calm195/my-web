@@ -1,8 +1,6 @@
-# P1 本地开发与联调
+# 本地开发与联调
 
-适用范围：工程初始化、站主认证和本地 HTTPS。2026-11-23 将工具、脚本、跨服务测试和 Node 配置集中到 `tools/`，根目录统一使用 `./dev`。历史 P1 和子模块拆分已通过的结果分别见 [P1 记录](../verification/P1-2026-11-17.md)及[拆分记录](../verification/submodules-2026-11-23.md)；本轮工具入口及共享验收流程见[优化验收记录](../verification/tools-2026-11-23.md)。
-
-内容发布、同步执行器、评论等按 P2 以后开发；当前 58 个操作的合同只实现公开站点配置和三个会话操作。
+从根目录使用 `./dev` 安装工具、启动公开站和管理端，并通过同一 HTTPS 入口验证 Go API。当前可联调公开站点配置以及站主登录、会话查询和退出。实际验收范围见[认证与本地 HTTPS 记录](../verification/P1-2026-11-17.md)、[子模块拆分记录](../verification/submodules-2026-11-23.md)和[浏览器与接口联合验收记录](../verification/tools-2026-11-23.md)。
 
 ## 1 取得完整工作区
 
@@ -51,7 +49,7 @@ git submodule status
 curl --cacert var/local/certs/ca.pem https://localhost:8443/api/v1/public/site
 ```
 
-`down` 只停止当前运行标识所属的进程，保留数据库与证据。失败时检查对应运行目录的 `logs/`，不删除数据尝试恢复。P1 只准备 Git 环境，尚不执行内容同步。
+`down` 只停止当前运行标识所属的进程，保留数据库与证据。失败时检查对应运行目录的 `logs/`，不删除数据尝试恢复。本地准备脚本会创建供测试使用的 bare remote，内容同步执行器尚未实现。
 
 ## 4 分层检查与完整验收
 
@@ -70,11 +68,11 @@ curl --cacert var/local/certs/ca.pem https://localhost:8443/api/v1/public/site
 
 修改信号、进程归属或清理逻辑时，另执行 `./dev exec pnpm --dir tools test:interruption`，真实验证启动中 SIGTERM、浏览器运行中 SIGINT 的退出码、失败结果、端口和运行锁释放。
 
-日常按变更范围运行相关命令；阶段完成或跨服务编排变更运行 `./dev verify`。完整验收先完成构建，避免每个套件重复构建；浏览器与 HTTP 套件共享同一次启动的真实服务，减少重复初始化与 Nuxt 编译。浏览器套件先执行，套件之间通过维护 CLI 恢复测试口令、清除会话，HTTP 限频测试最后执行，防止前一套状态污染后一套。共享服务并不复用 `var/local/` 或既有开发账号。
+日常按变更范围运行相关命令。需要完整验收或修改了跨服务编排时，运行 `./dev verify`。完整验收先完成构建，避免每个套件重复构建；浏览器与 HTTP 套件共享同一次启动的真实服务，减少重复初始化与 Nuxt 编译。浏览器套件先执行，套件之间通过维护 CLI 恢复测试口令、清除会话，HTTP 限频测试最后执行，防止前一套状态污染后一套。共享服务并不复用 `var/local/` 或既有开发账号。
 
 自动测试目录为 `var/test/<类型>-<run-id>/`，动态分配四个不同空闲端口；账号、SQLite、证书和 Git remote 均独立。成功、失败或 Ctrl+C 中断都停止自己启动的服务，保留日志、结果和必要截图。SIGINT/SIGTERM 分别返回 130/143，失败结果会记录中断状态。共享验收分别写出浏览器结果、HTTP 结果及总结果，记录同一入口与服务运行标识；原始凭据和数据库不提交。
 
-Firefox 使用正常 TLS 校验、独立 NSS profile 和独立 `MOZ_APP_DATA`、`MOZ_LOCAL_APP_DATA`，不访问用户既有浏览器数据，不关闭浏览器沙箱。浏览器路径无请求 mock。完整目标中的生产产物替换、备份恢复及 `test:release` 仍留在 P7；本地开发服务通过不代表生产部署或完整 AC30 通过。
+Firefox 使用正常 TLS 校验、独立 NSS profile 和独立 `MOZ_APP_DATA`、`MOZ_LOCAL_APP_DATA`，不访问用户既有浏览器数据，不关闭浏览器沙箱。浏览器路径无请求 mock。生产产物替换与备份恢复仍待验证，配套的 `test:release` 命令尚未实现。
 
 ## 5 认证与维护
 

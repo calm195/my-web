@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { managedTest } from './lifecycle.mjs'
-import { runE2E } from '../../tests/e2e/p1.mjs'
-import { runIntegration } from '../../tests/integration/p1.mjs'
+import { runE2E } from '../../tests/e2e/site-and-session.mjs'
+import { runIntegration } from '../../tests/integration/site-and-session.mjs'
 
 // 一次验收只启动一套真实服务；浏览器先运行，耗尽失败限频桶的 HTTP 用例最后运行。
 await managedTest('acceptance', async (s, signal, report) => {

@@ -34,7 +34,7 @@ Nuxt 默认支持服务端渲染；Node 官方将 24 列为 LTS，本项目选�
 以上锁定技术和主要版本路线；工程初始化时选择当时受支持、相互兼容的精确补丁版本，写入 `go.mod/go.sum`、`package.json`、`pnpm-lock.yaml` 和工具版本文件，不使用生产 `latest`。
 
 - Node、pnpm、Go 工具链精确固定；CI 和本地使用同一版本。TypeScript 使用通过 Nuxt、Vue 类型检查验证的精确兼容版本。
-- 已安装的本机工具不自动成为项目标准；本轮没有升级全局 Node、Go 或 pnpm。
+- 本地开发使用项目安装的私有工具，版本由仓库锁定。
 - SQLite 驱动锁定后在 Go 程序中执行 `SELECT sqlite_version()`，确认实际引擎包含所需修复；设计验证用的系统 SQLite 不代表生产驱动版本。
 - 依赖升级必须说明影响，重新执行相关构建、类型和行为检查；安全修复优先，禁止无理由一次升级全部依赖。
 - 运行环境只部署产物及必要运行时；不在服务器现场安装前端开发依赖或构建页面。
@@ -75,13 +75,13 @@ backend/                   # 独立 Git 子模块
 var/                       # 忽略的工具、运行数据与本地 bare 镜像
 ```
 
-P1 已建立 `frontend/apps/web`、`frontend/apps/admin`、`frontend/packages/api-client`、`frontend/packages/ui`，以及 Go 的认证、配置、站点设置、HTTP 与数据库模块。内容、评论、资源、同步和持久任务模块按后续阶段建立。`prototype/` 仍是单独提供的本地设计参考仓库，其 localStorage 示例逻辑不并入生产实现。
+已建立 `frontend/apps/web`、`frontend/apps/admin`、`frontend/packages/api-client`、`frontend/packages/ui`，以及 Go 的认证、配置、站点设置、HTTP 与数据库模块。内容、评论、资源、同步和持久任务目录是规划中的模块。`prototype/` 仍是单独提供的本地设计参考仓库，其 localStorage 示例逻辑不并入生产实现。
 
 前后端不复制根 `contracts/` 和 `docs/`。生成器默认从根工作区定位合同，也允许显式传入合同目录；生成类型提交在前端子模块。Go 服务运行不读取 OpenAPI 文件。前端凭已提交的生成类型独立构建，后端凭自身模块与迁移独立构建；完整合同检查和端到端验收由根工作区完成。
 
-根仓库地址为 `git@github.com:calm195/my-web.git`；两个子模块地址分别为 `git@github.com:calm195/my-web-frontend.git`、`git@github.com:calm195/my-web-backend.git`。本轮尚未推送这些新提交，递归检出验证使用本地镜像和仅对该命令生效的 URL 映射，不修改全局 Git 配置。私有内容同步仓库另行配置，不与应用子模块混用。
+根仓库地址为 `git@github.com:calm195/my-web.git`；两个子模块地址分别为 `git@github.com:calm195/my-web-frontend.git`、`git@github.com:calm195/my-web-backend.git`。递归检出使用根提交固定的两个子模块版本，验证环境见[子模块拆分记录](../verification/submodules-2026-11-23.md)。私有内容同步仓库另行配置，不与应用子模块混用。
 
-完整目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见 `tools/toolchain.json`，依赖以各仓库锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
+完整目录和职责见 [AGENTS.md](../../AGENTS.md)。项目工具链固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见 `tools/toolchain.json`，依赖以各仓库锁文件为准；[本地说明](../development/local-development.md)记录安装及验证边界。
 
 ## 4 模块依赖
 

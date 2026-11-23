@@ -4,7 +4,7 @@
 
 这是站主长期记录技术与生活的公开空间，规划包括个人资料与技术能力、项目经历、技术博客、生活分享、文章评论和留言板。
 
-当前可运行的是 P1。访客可以浏览公开站点首页，站主可以登录管理端、查看会话和退出。站点公开配置和三个会话接口已通过本地 HTTPS 和浏览器验收。下一阶段 P2 实现内容版本与发布，Git 同步和访客互动在后续阶段开发。[开发计划](docs/development-plan.md) · [P1 验收记录](docs/verification/P1-2026-11-17.md)
+访客可以浏览公开站点首页，站主可以登录管理端、查看会话和退出。站点公开配置和三个会话接口已通过本地 HTTPS 和浏览器验收。内容版本与发布、Git 同步及访客互动的开发安排见计划。[开发计划](docs/development-plan.md) · [工程与认证验收](docs/verification/P1-2026-11-17.md)
 
 ## 技术栈
 
@@ -14,7 +14,7 @@ Nuxt 4、Vue 3 和 TypeScript 负责公开站的服务端渲染。管理端用 V
 
 新检出时使用 `git clone --recurse-submodules git@github.com:calm195/my-web.git`。已有根仓库在切换版本后，执行 `git submodule update --init --recursive`，取得该根提交固定的前后端版本。远程检出需要三个仓库均已提供对应提交。
 
-以下命令从**根仓库目录**执行。首次安装需要 Git、Python 3.9+、OpenSSL 和网络，Firefox 验收还需要 NSS `certutil`。支持的平台和证书信任步骤见[本地开发说明](docs/development/p1-local.md)。
+以下命令从**根仓库目录**执行。首次安装需要 Git、Python 3.9+、OpenSSL 和网络，Firefox 验收还需要 NSS `certutil`。支持的平台和证书信任步骤见[本地开发说明](docs/development/local-development.md)。
 
 ```sh
 ./dev install     # 首次安装项目工具和依赖
@@ -29,7 +29,7 @@ Nuxt 4、Vue 3 和 TypeScript 负责公开站的服务端渲染。管理端用 V
 | 检查日常改动 | `./dev check` | 检查合同、设计约束及各端代码 |
 | 验证跨端行为 | `./dev acceptance` | 在隔离环境中启动一套服务，执行真实 Firefox 和 HTTPS 接口用例 |
 | 构建交付物 | `./dev build` | 生成公开站 `frontend/apps/web/.output/`、管理端 `frontend/apps/admin/dist/`、后端 `backend/bin/api` 和 `backend/bin/site-admin` |
-| 执行阶段验收 | `./dev verify` | 完成检查、测试、构建和跨端验收 |
+| 执行完整验收 | `./dev verify` | 完成检查、测试、构建和跨端验收 |
 
 生产部署按 Nuxt Node 服务、管理端静态文件和 Go API 三个单元规划。当前已验证独立构建与本地联调，生产部署待验收。[技术方案](docs/personal-website-technical-design.md) · [本地验收记录](docs/verification/tools-2026-11-23.md)
 
@@ -51,5 +51,5 @@ Nuxt 4、Vue 3 和 TypeScript 负责公开站的服务端渲染。管理端用 V
 | 修改站主认证 | [站主登录与会话开发须知](docs/development/owner-session.md) · [前后端交互规则](docs/design/interaction-contract.md) |
 | 修改接口或数据模型 | [详细设计导航](docs/design/README.md) · [API 设计](docs/design/api-design.md) · [数据库设计](docs/design/database-design.md) |
 | 了解协作和提交要求 | [编码与提交规范](CONTRIBUTING.md) · [开发与代理协作规范](AGENTS.md) |
-| 运行服务或排查联调问题 | [启动、停止与工具命令](docs/development/p1-local.md) · [本地联调规范](docs/local-integration.md) |
-| 查看验证范围与历史 | [设计检查](docs/design/validation.md) · [P1 真实服务验收](docs/verification/P1-2026-11-17.md) · [子模块拆分验证](docs/verification/submodules-2026-11-23.md) · [共享服务栈验收](docs/verification/tools-2026-11-23.md) |
+| 运行服务或排查联调问题 | [启动、停止与工具命令](docs/development/local-development.md) · [本地联调规范](docs/local-integration.md) |
+| 查看验证范围与历史 | [设计检查](docs/design/validation.md) · [站点与会话验收](docs/verification/P1-2026-11-17.md) · [子模块拆分验证](docs/verification/submodules-2026-11-23.md) · [共享服务栈验收](docs/verification/tools-2026-11-23.md) |

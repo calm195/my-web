@@ -1,4 +1,4 @@
-name: P1 quality and local integration
+name: Quality and local integration
 on:
   push:
     branches: [main, 'feat/**', 'fix/**']

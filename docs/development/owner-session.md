@@ -1,6 +1,6 @@
 # 站主登录与会话
 
-站主通过同源 HTTPS 入口登录管理端。P1 已实现登录、读取会话、退出和 CLI 改密后会话失效。本文以站主直接打开 `/admin/session` 为例，跟踪浏览器、Go API 与 SQLite 如何协作。内容编辑与发布属于后续阶段。[开发计划](../development-plan.md)
+站主通过同源 HTTPS 入口登录管理端。本文以直接打开 `/admin/session` 为例，说明浏览器、Go API 与 SQLite 如何建立和读取会话，以及退出或通过 CLI 改密后会话如何失效。
 
 ## 功能流程
 
@@ -29,12 +29,12 @@
 
 ## 验证方式
 
-在完整根工作区执行下列命令，首次使用先按[本地开发说明](p1-local.md)安装工具。按改动范围选择验证。
+在完整根工作区执行下列命令，首次使用先按[本地开发说明](local-development.md)安装工具。按改动范围选择验证。
 
 | 改动范围 | 从根目录执行 | 应观察到的结果 |
 | --- | --- | --- |
 | 管理端会话状态 | `./dev exec pnpm --dir frontend/apps/admin test` | 网络错误进入待确认状态，401 才清理身份。退出前的旧 GET 不会覆盖后来的状态。[前端状态测试](../../frontend/apps/admin/src/composables/session-state.test.ts) |
 | 服务端认证、请求校验 | `./dev exec go -C backend test -race ./internal/auth ./internal/httpapi` | 用例覆盖空闲和绝对期限边界、改密与登录并发、来源校验和限频。[认证测试](../../backend/internal/auth/service_test.go) · [HTTP 测试](../../backend/internal/httpapi/server_test.go) |
-| Cookie、代理、跨端登录流程 | `./dev acceptance` | 受信 HTTPS 下登录后可访问原管理页，多标签退出生效；缺少或错误 CSRF 的退出请求返回 403，有效退出返回 204，再用旧 Cookie 请求返回 401。[浏览器用例](../../tools/tests/e2e/p1.mjs) · [接口用例](../../tools/tests/integration/p1.mjs) |
+| Cookie、代理、跨端登录流程 | `./dev acceptance` | 受信 HTTPS 下登录后可访问原管理页，多标签退出生效；缺少或错误 CSRF 的退出请求返回 403，有效退出返回 204，再用旧 Cookie 请求返回 401。[浏览器用例](../../tools/tests/e2e/site-and-session.mjs) · [接口用例](../../tools/tests/integration/site-and-session.mjs) |
 
 单查接口或浏览器时分别执行 `./dev integration` 或 `./dev e2e`。验收脚本自行准备隔离账号和 SQLite 文件，自动停止其启动的服务，将结果与日志保存在 `var/test/` 的本次运行目录。本轮命令、覆盖范围和结果见[模块文档与本地服务验证记录](../verification/owner-session-docs-2026-11-23.md)。
