@@ -50,6 +50,7 @@ var/                      # 忽略的运行数据、本地工具和测试证据
 - [数据库详细设计与表字典](docs/design/database-design.md)
 - [API 详细设计](docs/design/api-design.md) · [OpenAPI 合同](contracts/openapi.yaml)
 - [设计验证记录](docs/design/validation.md)
+- [根目录与联调工具优化验收](docs/verification/tools-2026-11-23.md)
 - [子模块拆分验收](docs/verification/submodules-2026-11-23.md)
 - [Git 初始化与提交验证](docs/verification/git-initialization-2026-11-17.md)
 - [页面原型设计与验证记录](docs/personal-website-prototype-design.md)
