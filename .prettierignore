@@ -2,7 +2,8 @@
 **/.nuxt/**
 **/.output/**
 **/dist/**
-packages/api-client/src/generated/**
+frontend/**
+backend/**
 var/**
 prototype/**
 pnpm-lock.yaml

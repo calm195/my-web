@@ -70,3 +70,13 @@ sh scripts/dev/with-tools.sh node scripts/dev/workspace.mjs --locked
 仅停止本任务创建的服务，完成时通过 `ps` 与运行记录检查，未发现遗留项目服务进程、`processes.json` 或测试运行锁。既有 `prototype/README.md` 未提交修改保留；原源码及后端运行产物备份位于被忽略的 `var/migration/`。
 
 验证范围为本机 macOS/Firefox 与临时 SQLite。远程 GitHub 拉取权限、远程 CI、Linux/其他浏览器、生产部署和 P2 以后业务不在本次通过范围。私有子仓库的远程 CI 需配置 `SUBMODULES_READ_TOKEN`；推送时先后端、前端，最后根仓库，确保根指针引用的子提交可获取。
+
+## 6 拆分遗留清理（2026-11-23）
+
+后续清理删除 `var/migration/` 中的旧 `apps-original`、`packages-original`、`backend-original`、一次性提取脚本与临时索引，以及本次独立检出、递归检出的测试副本。历史映射已提交到本文相邻 JSON，不依赖已删除的临时映射；递归结果另存 `var/migration/recursive-result.json`。验收日志、HTTPS 结果、浏览器截图及本地 Git 镜像保留。
+
+根 `node_modules` 从遗留完整应用依赖中重建，仅按根冻结锁文件离线安装 86 个所需包，占用从约 316 MiB 降至约 46 MiB。本次清理目标原占用约 666 MiB，重新安装后净减少约 620 MiB；操作清单在本地 `var/migration/cleanup-result.json`。前后端子模块和原型源码未变。
+
+根格式忽略规则移除过时的 `packages/` 路径，并明确忽略前后端子模块；它们的格式检查由各自工程执行。根 Node 配置、工具链与依赖仍用于服务编排、检查和浏览器测试，继续保留。
+
+清理后 `pnpm check`（含前后端检查及 33 项设计验证）、`workspace.mjs --locked`、Playwright 1.65.1 工具加载及 `git diff --check` 均通过；未改业务代码，本次未重复 HTTPS 或浏览器全流程。
