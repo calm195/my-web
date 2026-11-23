@@ -33,7 +33,8 @@ export async function environment(kind, { signal, onPrepared } = {}) {
       process.env[`SITE_${name}_PORT`] = String(socket.address().port)
     }
   } finally {
-    // 先保留四个不同空闲端口，再统一释放供服务启动；不抢占其他项目端口。
+    // 先暂时占住四个不同的空闲端口，避免同轮重复分配；释放后到启动前仍可能被其他进程占用。
+    // 服务必须严格绑定指定端口，遇到竞争就失败清理，不能接管已有进程或偷偷换端口。
     await Promise.all(sockets.map((socket) => new Promise((resolve) => socket.close(resolve))))
   }
   const service = await import('../dev/services.mjs')

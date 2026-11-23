@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate design contracts and executable SQLite invariants; no production I/O."""
+"""验证合同与 SQLite 结构约束；只使用内存数据库，不代表服务链路验收。"""
 from pathlib import Path
 import json
 import re
@@ -27,6 +27,8 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(not errors, case['valid'], str(errors[:1]))
 
     def test_unique_operation_ids_and_auth(self):
+        # 管理接口除登录外须声明会话；写操作还须声明 CSRF，幂等键按登录、退出和预览例外处理。
+        # 此处只检查声明，实际权限和幂等行为仍需通过真实 HTTP 服务验证。
         ids = []
         for path, operations in SPEC['paths'].items():
             for method, op in operations.items():
@@ -42,6 +44,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_public_response_has_no_private_properties(self):
+        # 沿响应 schema 的引用递归检查嵌套字段；visited 只防循环，不代替运行时字段白名单。
         forbidden = {'email', 'password_hash', 'csrf_token', 'token_hash', 'draft', 'sync', 'generation', 'remote_url', 'credential_ref'}
         def walk(value, visited):
             if isinstance(value, dict):
@@ -76,6 +79,7 @@ class ContractTests(unittest.TestCase):
 
 class DatabaseTests(unittest.TestCase):
     def setUp(self):
+        # 每个用例独占内存库并显式启用外键；不接触开发库，也不证明 Go 驱动配置相同。
         self.db = sqlite3.connect(':memory:', isolation_level=None)
         self.db.execute('PRAGMA foreign_keys=ON')
         self.db.executescript(SQL)
@@ -84,6 +88,7 @@ class DatabaseTests(unittest.TestCase):
         self.db.close()
 
     def object(self, oid='a', kind='article', published=True):
+        # 对象与首版本存在延迟外键环，须在同一事务完成指针赋值后再提交。
         self.db.execute('BEGIN')
         self.db.execute('INSERT INTO content_objects(id,kind,created_at,updated_at) VALUES(?,?,1,1)', (oid, kind))
         self.revision(oid, oid+'-r1', 1, '公开标题')
@@ -110,6 +115,7 @@ class DatabaseTests(unittest.TestCase):
         self.db.execute('INSERT INTO comments(id,thread_id,is_root,reply_to_id,reply_to_nickname,nickname,body,state,created_at,updated_at) VALUES(?,?,0,?,?,?, ?,?,2,2)', (rid, tid, target or tid+'-root', '目标昵称', '访客', '回复', 'hidden' if hidden else 'visible'))
 
     def job(self, **overrides):
+        # 字段名仅来自本文件的固定测试夹具及调用者传入的测试关键字；字段值仍使用参数绑定。
         fields = {'id':'job','kind':'sync_content','aggregate_id':'a','target_generation':1,'dedupe_key':'sync:a:1','next_run_at':1,'created_at':1,'updated_at':1}
         fields.update(overrides)
         self.db.execute('INSERT INTO outbox_jobs('+','.join(fields)+') VALUES('+','.join('?' for _ in fields)+')', list(fields.values()))
@@ -140,6 +146,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT count(*) FROM public_content').fetchone()[0], 0)
 
     def test_cas_failure_rolls_back_new_revision(self):
+        # 模拟旧 generation 写入：影响零行时回滚整个事务，不能留下孤立版本。
         self.object()
         self.db.execute('BEGIN')
         self.revision('a','a-r2',2,'不能保存')
@@ -149,6 +156,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT count(*) FROM content_revisions WHERE id='a-r2'").fetchone()[0],0)
 
     def test_outbox_failure_rolls_back_content_change(self):
+        # outbox 去重冲突必须与对象指针、版本插入一并回滚，避免只提交业务状态。
         self.object(); self.job()
         self.db.execute('BEGIN')
         self.revision('a','a-r2',2,'新版本')
@@ -273,6 +281,7 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT count(*) FROM comment_contacts').fetchone()[0],0)
 
     def test_purge_can_keep_tombstone_and_remote_job(self):
+        # 删除对象级联清理内容和评论，但 tombstone 与远端删除任务必须保留，阻止旧事件复活。
         self.object(); self.thread(content='a')
         self.db.execute('BEGIN')
         self.db.execute("INSERT INTO tombstones VALUES('a','article',2,2,NULL)")
