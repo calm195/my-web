@@ -365,6 +365,7 @@ async function available(port) {
 
 function identity(pid) {
   if (!Number.isSafeInteger(pid) || pid <= 0) return ''
+  // 同时核对启动时间、进程组和命令，降低 PID 已被系统复用时误杀其他进程的风险。
   const result = spawnSync('ps', ['-p', String(pid), '-o', 'lstart=,pgid=,args='], {
     encoding: 'utf8',
   })
@@ -674,6 +675,7 @@ export async function down() {
   const owner = lockOwner()
   if (current) await stopRun(current)
   else if (owner) {
+    // 尚无进程记录时只回收已退出所有者留下的锁；运行中的 prepare/up 仍持有该目录。
     if (alive(owner.owner)) throw new Error('准备或启动仍在进行，请待当前命令结束后重试')
     releaseLock(owner.runId)
   }

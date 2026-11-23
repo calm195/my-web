@@ -155,6 +155,7 @@ OVERRIDES = {
 
 
 def render():
+    # 在临时内存库读取迁移形成的实际结构；不会打开或修改开发者的 SQLite 数据。
     db = sqlite3.connect(':memory:')
     db.execute('PRAGMA foreign_keys=ON')
     db.executescript((ROOT / 'backend/migrations/00001_initial.sql').read_text())
@@ -166,6 +167,8 @@ def render():
         lines.extend([f'## {number} {table}', '', description, '',
                       '| 字段 | SQL 类型 | 可空 | 默认值 | 键 | 含义 |',
                       '| --- | --- | --- | --- | --- | --- |'])
+        # 表名来自本脚本固定字典，索引名来自内存库的 SQLite schema，不接受外部输入。
+        # PRAGMA 不支持在这些标识符位置绑定参数，普通字段值查询仍使用参数绑定。
         fks = {}
         for fk in db.execute(f'PRAGMA foreign_key_list({table})'):
             fks.setdefault(fk[3], []).append(f'{fk[2]}.{fk[4]} / DELETE {fk[6]}')

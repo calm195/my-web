@@ -107,3 +107,17 @@ SQL 迁移在部署维护步骤中由 Goose 执行，应用启动仅检查版本
 按[根仓库开发计划](docs/development-plan.md)协调任务。用户允许启动子代理参与开发；按模块明确文件归属和合同，主代理负责共享文件、集成与最终验证。各代理使用独立数据库、Git 工作区和分配端口，不能互相覆盖文件或停止他人的本地服务。
 
 共享 OpenAPI、迁移、各仓库锁文件、客户端及内容状态服务在同一时间指定一个负责人。模块完成后记录实际命令、结果与未验证事项；整合版本必须通过本地真实服务联调，证据记录到 `docs/verification/`。详细协作规则见 `AGENTS.md`。
+
+## 9 技术栈实践与取舍
+
+技术栈官方文档和社区评审建议是本规范的参考，不替代需求、合同、数据库设计或本仓库明确规定的安全边界。引入规则前确认与锁定版本兼容、检查覆盖范围及执行成本；确需例外时记录原因。参考资料：
+
+| 范围 | 实践及本项目约束 | 依据 |
+| --- | --- | --- |
+| Go | 使用 gofmt 和 vet；显式传递取消及超时，导出注释以符号名开头，按本项目要求使用中文。 | [Go 代码评审建议](https://go.dev/wiki/CodeReviewComments)、[Go 安全实践](https://go.dev/doc/security/best-practices) |
+| 数据库 | 事务内读写使用服务层持有的事务对象；每个 SQLite 连接启用外键，WAL 下仍要考虑写锁及备份一致性。 | [Go 事务](https://go.dev/doc/database/execute-transactions)、[SQLite 外键](https://www.sqlite.org/foreignkeys.html)、[SQLite WAL](https://www.sqlite.org/wal.html) |
+| Vue 和 Nuxt | 遵循组件及模板安全约定；SSR 状态按请求隔离，公开渲染不转发管理员 Cookie，也不将私密信息写入 payload。 | [Vue 风格指南](https://vuejs.org/style-guide/)、[Vue SSR 指南](https://vuejs.org/guide/scaling-up/ssr.html)、[Nuxt 数据获取](https://nuxt.com/docs/4.x/getting-started/data-fetching) |
+| TypeScript | 保持 strict；额外严格选项先评估现有代码和生成类型的兼容性，不能用断言批量消除真实空值风险。 | [TypeScript 配置参考](https://www.typescriptlang.org/tsconfig/) |
+| 依赖与自动化 | 使用已锁定版本和冻结安装；评估漏洞扫描的工具版本、数据源、离线行为及误报，再决定是否设置门禁。CI 的权限与外部 Actions 依赖应定期审查。 | [Go 安全实践](https://go.dev/doc/security/best-practices)、[GitHub Actions 安全指南](https://docs.github.com/en/actions/reference/security/secure-use) |
+
+`./dev check` 的格式检查范围以实际脚本为准，不能据此声称所有 SQL、Shell、Python、合同或文档已被自动格式化。对现有实现做逻辑评审时区分可复现缺陷、待验证风险及尚未实现的设计；设计检查和 mock 不能替代真实服务验收。
