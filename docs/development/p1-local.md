@@ -1,6 +1,18 @@
 # P1 本地开发与联调
 
-适用范围：工程初始化、站主认证和本地 HTTPS。内容发布、同步执行器、评论等功能按 P2 以后开发；当前 58 个操作的合同只实现公开站点配置和三个会话操作。
+适用范围：工程初始化、站主认证和本地 HTTPS；2026-11-23 更新为前后端 Git 子模块结构。内容发布、同步执行器、评论等功能按 P2 以后开发；当前 58 个操作的合同只实现公开站点配置和三个会话操作。
+
+根仓库保留唯一的 `contracts/`、`docs/`、编排与跨服务测试；`frontend/`、`backend/` 各有独立 Git 历史。首次从远程检出使用：
+
+```sh
+git clone --recurse-submodules git@github.com:calm195/my-web.git
+cd my-web
+git submodule status
+```
+
+已有根仓库在切换版本后执行 `git submodule update --init --recursive`，使两个子模块回到根提交记录的版本。不要使用 `--remote` 自动跟随最新分支。子模块默认是 detached HEAD，开始开发前在对应仓库创建任务分支。
+
+前端地址为 `git@github.com:calm195/my-web-frontend.git`，后端地址为 `git@github.com:calm195/my-web-backend.git`。本轮只配置地址和完成本地提交，推送前远程尚不包含新拆分版本；本地递归检出验证通过镜像和命令级 `url.<本地地址>.insteadOf` 完成，不修改全局 Git 设置。`var/repos/` 中的 bare 镜像与内容同步测试的临时 bare remote 职责不同，均不提交。
 
 ## 1 固定工具与首次安装
 
@@ -9,6 +21,7 @@
 ```sh
 python3 scripts/dev/bootstrap.py
 sh scripts/dev/with-tools.sh pnpm install --frozen-lockfile
+sh scripts/dev/with-tools.sh pnpm --dir frontend install --frozen-lockfile
 python3 -m venv var/venv
 var/venv/bin/pip install -r scripts/design-requirements.txt
 PLAYWRIGHT_BROWSERS_PATH=var/cache/playwright sh scripts/dev/with-tools.sh pnpm exec playwright install firefox
@@ -16,7 +29,9 @@ PLAYWRIGHT_BROWSERS_PATH=var/cache/playwright sh scripts/dev/with-tools.sh pnpm 
 
 `toolchain.json` 固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9 及官方发行物摘要。安装目录和缓存位于被忽略的 `var/`；`with-tools.sh` 只对当前命令选择项目工具，不修改全局 Node、Go、Corepack 或 shell 配置。首次下载需要网络。
 
-pnpm 12 使用 workspace 的 `allowBuilds`；仅允许锁定依赖中的 esbuild 安装脚本。依赖发布等待期的例外精确到当前 TypeScript ESLint 版本，锁文件和规则一起提交，后续依赖更新仍需检查。前端主要依赖固定 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8、Vue Router 4.6.5、TypeScript 5.9.3。
+根目录与 `frontend/` 分别冻结安装自己的依赖，也可使用根命令 `pnpm install:all` 完成两处安装。前端的 pnpm 12 workspace 使用 `allowBuilds`，仅允许锁定依赖中的 esbuild 安装脚本。依赖发布等待期的例外精确到当前 TypeScript ESLint 版本，锁文件和规则一起提交，后续依赖更新仍需检查。前端主要依赖固定 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8、Vue Router 4.6.5、TypeScript 5.9.3。
+
+前端应用与共享包在 `frontend/apps/` 和 `frontend/packages/`；后端 Go 模块、迁移和二进制分别在 `backend/`、`backend/migrations/`、`backend/bin/`。根依赖用于脚本、跨进程和浏览器测试，后端构建不依赖前端包安装。
 
 Linux 浏览器测试需先安装系统依赖，CI 中执行 `playwright install --with-deps firefox` 和安装 `libnss3-tools`。macOS 使用已安装的 NSS `certutil`。这些是软件依赖安装，不是修改系统证书信任。
 
@@ -34,7 +49,7 @@ sh scripts/dev/with-tools.sh pnpm dev:status
 
 `dev:prepare` 显式执行 Goose 迁移，创建初始站点设置、唯一测试站主、随机密钥、开发证书及临时 bare Git remote。重复执行不会重置已有账号、站点或数据库。默认账号信息保存在 `var/local/credentials.json`，只供本地开发者读取，不打印到日志。Go API 启动只核验 schema，不自动迁移。
 
-运行数据、证书、口令、PID 与日志都位于 `var/local/`。可用 `SITE_RUN_DIR` 指向项目 `var/` 内另一个独立目录；prepare 拒绝接管无标记的非空目录。P1 只准备 Git 测试环境，尚不执行内容同步。
+运行数据、证书、口令、PID 与日志都位于 `var/local/`。Nuxt 编译目录与 Vite 缓存分别在该运行目录的 `nuxt/`、`vite/`，测试环境互不共享开发进程锁或端口编译配置；Nuxt 启动使用严格端口并禁止接管其他进程。可用 `SITE_RUN_DIR` 指向项目 `var/` 内另一个独立目录；prepare 拒绝接管无标记的非空目录。P1 只准备 Git 测试环境，尚不执行内容同步。
 
 本地 HTTPS 使用独立 CA。CLI 联调显式使用其 CA 文件；自动化 Firefox 仅在临时浏览器 profile 中信任该 CA，保持正常证书校验。普通浏览器需自行明确信任本地证书后访问，脚本不会修改系统钥匙串或全局浏览器信任。不得用忽略证书错误代替验收。
 
@@ -78,9 +93,13 @@ sh scripts/dev/with-tools.sh pnpm test:e2e
 
 当前 `test:release` 尚未实现，保留到 P7 的生产产物替换和恢复验收。已有 `pnpm build` 证明三端可独立产出，不代表生产部署或完整 AC30 已通过。
 
+前端可从子模块目录执行 `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`，不使用 Go。后端通过 `sh backend/scripts/check.sh`、`sh backend/scripts/test.sh`、`sh backend/scripts/build.sh` 独立执行，不使用 Node；在根工作区可在这些命令前加 `sh scripts/dev/with-tools.sh` 选择已锁定的 Go。合同生成与设计检查需完整根工作区，不能由单端构建结果替代。
+
 ## 5 合同与参考
 
-OpenAPI 仍为接口字段依据，`pnpm generate` 更新生成类型，`generate:check` 仅核对漂移。生成器无法完整表达 `ResolveConflict` 的条件 schema；编译级正反例已记录该边界，后端实现对应功能时必须进行运行时校验。
+根 `contracts/openapi.yaml` 是接口字段依据，根 `pnpm generate` 调用前端生成器，更新 `frontend/packages/api-client/src/generated/schema.ts`；`generate:check` 仅核对漂移。生成器默认按脚本位置定位根合同，也允许 `SITE_CONTRACTS_DIR` 显式指定合同目录；子模块中不维护合同副本。生成器无法完整表达 `ResolveConflict` 的条件 schema；编译级正反例已记录该边界，后端实现对应功能时必须进行运行时校验。
+
+根 CI 递归检出子模块；私有子仓库需配置可读取两侧的 `SUBMODULES_READ_TOKEN`，公共仓库可使用默认 token。根 CI 分别冻结安装根目录及前端依赖，再执行合同检查、各端测试和整体 HTTPS 验收。修改合同和实现后先完成子模块提交，最后由根提交记录合同、文档与子模块指针；后续推送也遵循子仓库先、根仓库后的顺序。只有本地提交时不能把远程 CI 描述为已执行。
 
 Firefox 测试还将 `MOZ_APP_DATA` 和 `MOZ_LOCAL_APP_DATA` 指向本次运行目录，避免启动时触及用户已有的 Firefox 数据；这与 profile 隔离同时使用，不关闭浏览器沙箱或 TLS 校验。[Mozilla 独立测试目录说明](https://bugzilla.mozilla.org/show_bug.cgi?id=2078511)
 

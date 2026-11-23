@@ -1,6 +1,6 @@
 # 技术栈与工程结构
 
-版本：1.0，2026-11-15。首版选定以下路线，不使用 Java；“轻量”落实为少运行组件、明确依赖和单机可维护，不省略版本、权限和同步一致性设计。
+版本：1.1，2026-11-23。首版选定以下路线，不使用 Java；“轻量”落实为少运行组件、明确依赖和单机可维护，不省略版本、权限和同步一致性设计。
 
 ## 1 选定组件
 
@@ -13,7 +13,7 @@
 | 状态管理 | Nuxt `useState` / `useAsyncData`；管理端 composable | 局部表单归组件；会话与全局提示集中管理；首版不加通用全局 Store 库 |
 | HTTP 客户端 | 原生 fetch 封装、OpenAPI 生成的 TypeScript 类型 | Nuxt SSR 取数经 `useAsyncData`；管理端使用统一错误与重试规则 |
 | 前端运行时 | Node 24 LTS | 公开前端常驻；开发与 CI 使用同一精确补丁版本 |
-| 前端包管理 | pnpm workspace | 一个锁文件；Nuxt 自己管理其构建器依赖，不强制覆盖为管理端 Vite 版本 |
+| 前端包管理 | pnpm workspace | 前端子模块一个锁文件，根编排另有锁文件；Nuxt 自己管理其构建器依赖，不强制覆盖为管理端 Vite 版本 |
 | 后端语言 | Go 1.27，初始化基线 1.27.4 | `net/http`、`database/sql`、`log/slog`；模块化单体 |
 | 数据库 | SQLite 3、`modernc.org/sqlite` | 无 CGo 驱动；WAL、STRICT 表、外键、短写事务；不使用大型 ORM |
 | 数据库迁移 | `github.com/pressly/goose/v3` | SQL 迁移，发布前单独执行，应用只检查 schema 版本 |
@@ -41,38 +41,44 @@ Nuxt 默认支持服务端渲染；Node 官方将 24 列为 LTS，本项目选�
 
 ## 3 应用代码仓库
 
-建议仓库名 `personal-website`，主分支 `main`。应用代码和设计合同放在同一仓库，前后端按路径触发独立 CI；内容仓库名建议 `personal-website-content`，私有，默认同步分支 `main`。名称和提供方是部署配置，不在代码里写死。
+根仓库统一维护合同、文档、编排、跨服务验证与部署配置；前端和后端分别为独立 Git 仓库，以子模块纳入根仓库。三个仓库主分支均为 `main`。一个根提交固定合同和两个子模块提交；不使用额外的版本组合清单，不自动跟随子模块分支。
 
 ```text
-apps/
-  web/                     # Nuxt 公开站
-    app/pages/             # 页面入口；页面加载与元信息
-    app/components/        # 公开业务组件
-    app/composables/       # 公开查询与交互
-    server/                # 仅渲染配置，不建立业务 API
-  admin/                   # Vue + Vite
-    src/router/
-    src/views/<feature>/   # 页面及其内部组件
-    src/components/        # 多页面共享组件
-    src/composables/       # 会话、编辑状态、业务请求
-packages/
-  api-client/              # 生成类型与手写请求适配器分目录
-  ui/                      # 设计 token 和必要基础组件
-backend/
+.gitmodules                # 前后端子模块地址与路径
+AGENTS.md                  # 公共开发和协作规范
+contracts/                 # 唯一 OpenAPI、内容 schema 与正反例
+docs/                      # 唯一需求、设计、开发计划与验收记录
+scripts/                   # 合同/字典生成、开发编排与跨仓库检查
+tests/                     # 跨进程集成与真实浏览器用例
+deploy/                    # Caddy、systemd、环境变量示例
+frontend/                  # 独立 Git 子模块
+  AGENTS.md                # 前端补充规范，引用根规则
+  apps/web/                # Nuxt 公开站；server 仅渲染配置，无业务 API
+  apps/admin/              # Vue + Vite 管理端
+  packages/api-client/     # 根 OpenAPI 生成类型与手写请求适配器
+  packages/ui/             # 设计 token 和必要基础组件
+  package.json
+  pnpm-workspace.yaml
+  pnpm-lock.yaml
+backend/                   # 独立 Git 子模块
+  AGENTS.md                # 后端补充规范，引用根规则
   cmd/api/                 # HTTP + 受控后台执行器
   cmd/site-admin/          # 初始化账号、改密、诊断等运维 CLI
   internal/{auth,content,comments,media,taxonomy,sync,jobs,settings}/
   internal/{httpapi,store,config}/
   migrations/              # 不可修改的已应用 SQL 迁移
-contracts/                 # OpenAPI 与有效/无效请求样例
-docs/design/               # 详细设计
-scripts/                   # 可重复验证与开发辅助
-deploy/                    # Caddy、systemd、环境变量示例
+  go.mod
+  go.sum
+var/                       # 忽略的工具、运行数据与本地 bare 镜像
 ```
 
-P1 已建立 `apps/web`、`apps/admin`、`packages/api-client`、`packages/ui`，以及 Go 的认证、配置、站点设置、HTTP 与数据库模块。内容、评论、资源、同步和持久任务模块按后续阶段建立。现有 `prototype/` 有独立 Git 仓库，只作为设计参考，其 `.git` 和 localStorage 示例逻辑不并入应用。
+P1 已建立 `frontend/apps/web`、`frontend/apps/admin`、`frontend/packages/api-client`、`frontend/packages/ui`，以及 Go 的认证、配置、站点设置、HTTP 与数据库模块。内容、评论、资源、同步和持久任务模块按后续阶段建立。`prototype/` 仍是单独提供的本地设计参考仓库，其 localStorage 示例逻辑不并入生产实现。
 
-2026-11-17 补充：完整开发目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 实际固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见 `toolchain.json`，依赖以锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
+前后端不复制根 `contracts/` 和 `docs/`。生成器默认从根工作区定位合同，也允许显式传入合同目录；生成类型提交在前端子模块。Go 服务运行不读取 OpenAPI 文件。前端凭已提交的生成类型独立构建，后端凭自身模块与迁移独立构建；完整合同检查和端到端验收由根工作区完成。
+
+根仓库地址为 `git@github.com:calm195/my-web.git`；两个子模块地址分别为 `git@github.com:calm195/my-web-frontend.git`、`git@github.com:calm195/my-web-backend.git`。本轮尚未推送这些新提交，递归检出验证使用本地镜像和仅对该命令生效的 URL 映射，不修改全局 Git 配置。私有内容同步仓库另行配置，不与应用子模块混用。
+
+完整目录和职责见 [AGENTS.md](../../AGENTS.md)，阶段拆分见[开发计划](../development-plan.md)。P1 固定 Node 24.22.3、Go 1.27.4、pnpm 12.21.0、Caddy 2.11.9；前端采用 Nuxt 4.6.4、Vue 3.5.45、Vite 8.3.8。工具发行物摘要见根 `toolchain.json`，依赖以各仓库锁文件为准；[本地说明](../development/p1-local.md)记录安装及验证边界。
 
 ## 4 模块依赖
 

@@ -106,7 +106,7 @@ try {
   assert.equal((await s.request(sessionPath, { headers: { Cookie: firstCookie } })).status, 401)
   const third = await send('POST', sessionPath, s.credentials)
   s.execute(
-    path.join(s.root, 'backend/bin/site-admin'),
+    path.join(s.backendRoot, 'bin/site-admin'),
     ['reset-password', '--username', s.credentials.username],
     { env: s.serviceEnv(), input: s.credentials.password + '-changed\n' },
   )
@@ -131,7 +131,7 @@ try {
   checked('真实登录失败限频与 Retry-After')
 
   const diagnostic = JSON.parse(
-    s.execute(path.join(s.root, 'backend/bin/site-admin'), ['diagnose'], { env: s.serviceEnv() }),
+    s.execute(path.join(s.backendRoot, 'bin/site-admin'), ['diagnose'], { env: s.serviceEnv() }),
   )
   assert.equal(diagnostic.foreign_keys, 1)
   assert.equal(diagnostic.journal_mode, 'wal')

@@ -7,6 +7,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+// 源码由各自 Git 子模块管理；运行数据始终只写根仓库 var。
+export const frontendRoot = path.join(root, 'frontend')
+export const backendRoot = path.join(root, 'backend')
 export const tools = path.join(root, 'var/toolchain')
 export const toolEnv = {
   ...process.env,
@@ -76,7 +79,7 @@ function assertOwned() {
     ...['site.sqlite', 'site.sqlite-wal', 'site.sqlite-shm'].map((name) =>
       path.join(runDir, 'db', name),
     ),
-    ...['db', 'assets', 'git', 'logs', 'certs', 'run', 'caddy'].map((name) =>
+    ...['db', 'assets', 'git', 'logs', 'certs', 'run', 'caddy', 'nuxt', 'vite'].map((name) =>
       path.join(runDir, name),
     ),
   ])
@@ -101,6 +104,8 @@ export function serviceEnv(c = config()) {
     SITE_PUBLIC_ORIGIN: c.origin,
     SITE_CSRF_KEY: c.csrfKey,
     SITE_RATE_LIMIT_KEY: c.rateLimitKey,
+    SITE_NUXT_BUILD_DIR: path.join(runDir, 'nuxt'),
+    SITE_VITE_CACHE_DIR: path.join(runDir, 'vite'),
     SITE_WEB_PORT: String(c.webPort),
     SITE_ADMIN_PORT: String(c.adminPort),
     SITE_HTTPS_PORT: String(c.httpsPort),
@@ -288,14 +293,14 @@ export function prepare() {
       )
     }
     const env = serviceEnv()
-    execute(path.join(root, 'backend/bin/site-admin'), ['migrate'], { env })
+    execute(path.join(backendRoot, 'bin/site-admin'), ['migrate'], { env })
     const diagnostics = JSON.parse(
-      execute(path.join(root, 'backend/bin/site-admin'), ['diagnose'], { env }),
+      execute(path.join(backendRoot, 'bin/site-admin'), ['diagnose'], { env }),
     )
     if (!diagnostics.admin_initialized) {
       const credentials = { username: 'owner', password: randomBytes(24).toString('base64url') }
       execute(
-        path.join(root, 'backend/bin/site-admin'),
+        path.join(backendRoot, 'bin/site-admin'),
         ['init-admin', '--username', credentials.username],
         { env, input: credentials.password + '\n' },
       )
@@ -539,17 +544,21 @@ async function serve(runId) {
     })
   }
   try {
-    await start('api', path.join(root, 'backend/bin/api'), [])
+    await start('api', path.join(backendRoot, 'bin/api'), [])
     await start('web', path.join(tools, 'node/bin/node'), [
-      path.join(root, 'apps/web/node_modules/nuxt/bin/nuxt.mjs'),
+      path.join(frontendRoot, 'apps/web/node_modules/nuxt/bin/nuxt.mjs'),
       'dev',
-      path.join(root, 'apps/web'),
+      path.join(frontendRoot, 'apps/web'),
+      '--port',
+      String(c.webPort),
+      '--strictPort',
+      '--no-takeover',
     ])
     await start('admin', path.join(tools, 'node/bin/node'), [
-      path.join(root, 'apps/admin/node_modules/vite/bin/vite.js'),
+      path.join(frontendRoot, 'apps/admin/node_modules/vite/bin/vite.js'),
       '--config',
-      path.join(root, 'apps/admin/vite.config.ts'),
-      path.join(root, 'apps/admin'),
+      path.join(frontendRoot, 'apps/admin/vite.config.ts'),
+      path.join(frontendRoot, 'apps/admin'),
     ])
     const template = fs.readFileSync(path.join(root, 'deploy/local/Caddyfile'), 'utf8')
     const replaced = template

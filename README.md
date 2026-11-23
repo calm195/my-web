@@ -2,6 +2,20 @@
 
 当前阶段：P1 工程初始化、站主认证及本地 HTTPS 底座已完成，并通过真实服务和浏览器验证。公开站、管理端和 Go API 可独立构建；下一阶段为 P2 内容版本与发布闭环。生产服务尚未部署。
 
+## 仓库组织
+
+根仓库统一维护 `contracts/`、`docs/`、本地 HTTPS 编排和跨服务测试。`frontend/`、`backend/` 为独立 Git 仓库，通过子模块纳入根仓库；公开站、管理端和共享前端包位于前端子模块。根提交同时固定合同、文档和两个子模块的提交版本。
+
+```text
+contracts/、docs/          # 根仓库：唯一合同与文档
+scripts/、tests/、deploy/  # 根仓库：联调、验证与部署配置
+frontend/                 # 子模块：apps/web、apps/admin、packages
+backend/                  # 子模块：cmd、internal、migrations
+var/                      # 忽略的运行数据、本地工具和测试证据
+```
+
+根仓库地址为 `git@github.com:calm195/my-web.git`，前后端子模块分别为 `git@github.com:calm195/my-web-frontend.git`、`git@github.com:calm195/my-web-backend.git`。使用递归子模块方式检出，方法见[开发说明](docs/development/p1-local.md)。本轮仅完成本地提交，推送前远程尚不包含本次拆分版本。
+
 ## 本地开发
 
 首次安装、启动及停止方法见 [P1 本地开发说明](docs/development/p1-local.md)，实际环境、命令与结果见 [P1 验证记录](docs/verification/P1-2026-11-17.md)。工具链固定在项目内，不依赖全局 pnpm；默认入口为 `https://localhost:8443`，管理端为 `/admin/`。
@@ -25,7 +39,7 @@ sh scripts/dev/with-tools.sh pnpm dev:up
 ## 文档
 
 - [需求文档 v1.3](docs/personal-website-requirements.md)
-- [轻量技术方案 v1.2](docs/personal-website-technical-design.md)
+- [轻量技术方案 v1.3](docs/personal-website-technical-design.md)
 - [开发详细设计总入口](docs/design/README.md)
 - [开发与代理协作规范](AGENTS.md)
 - [分阶段开发计划](docs/development-plan.md) · [本地服务联调规范](docs/local-integration.md)
@@ -44,7 +58,7 @@ sh scripts/dev/with-tools.sh pnpm dev:up
 
 开发按“工程与认证 → 内容发布闭环 → 真实 Git 同步验证 → 完整内容及互动 → 全量联调与恢复”推进，允许按模块启动子代理。SQL 与代码关键位置必须使用中文注释；阶段完成以本地真实服务证据为准。P1 已实现启动、停止、检查、独立构建和 HTTPS/浏览器测试；Git 当前只准备隔离 bare remote，内容同步按 P3 开发。
 
-本地应用 Git 仓库已于 2026-11-17 初始化，主分支为 `main`；尚未配置远程仓库。`prototype/` 被应用仓库忽略，继续独立管理。
+根 Git 仓库于 2026-11-17 初始化，主分支为 `main`；2026-11-23 按前后端子模块组织，合同和文档保留在根仓库。`prototype/` 被根仓库忽略，继续独立管理。
 
 ## 原型发布记录
 

@@ -16,8 +16,6 @@
 node_modules/
 .nuxt/
 .output/
-/apps/*/dist/
-/backend/bin/
 coverage/
 playwright-report/
 test-results/
@@ -28,3 +26,5 @@ __pycache__/
 
 # Existing prototype is a separate repository, not application source.
 /prototype/
+
+# 前后端由 gitlink 跟踪，各自产物由子仓库 .gitignore 管理。

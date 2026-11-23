@@ -1,6 +1,6 @@
 # 开发与代理协作规范
 
-适用范围：本目录及全部子目录。面向开发者、主代理和子代理；采用标准文件名 `AGENTS.md`。更新日期：2026-11-17。
+适用范围：本目录及全部子目录。面向开发者、主代理和子代理；采用标准文件名 `AGENTS.md`。更新日期：2026-11-23。
 
 ## 1 任务范围与依据
 
@@ -23,56 +23,44 @@
 以下为开发时必须遵守的目标结构，尚不存在的目录在对应阶段创建，不用空目录冒充实现。
 
 ```text
-AGENTS.md                         # 本文件：开发及代理协作约束
-CONTRIBUTING.md                    # 面向开发者的详细规范
-README.md                         # 项目入口、真实状态及启动说明
-apps/
-  web/                            # Nuxt 公开站，可独立构建
-    app/pages/                    # 页面路由、数据编排、SEO
-    app/components/               # 公开站业务组件
-    app/composables/              # 公开数据请求及交互
-    server/                       # 渲染相关配置，不实现业务 API
-  admin/                          # Vue + Vite 管理端，可独立构建
-    src/router/
-    src/views/<feature>/          # 页面及仅供该页面使用的组件
-    src/components/               # 跨页面业务组件
-    src/composables/              # 会话、编辑状态、业务请求
-packages/
-  api-client/src/
-    generated/                    # OpenAPI 生成类型，不手改
-    transport/                    # 手写 fetch、CSRF、幂等、错误转换
-  ui/                             # 共享 token 和必要基础组件
-backend/
+AGENTS.md                         # 根规范，对前后端子模块同样适用
+CONTRIBUTING.md                    # 公共编码与提交规范
+README.md                         # 总入口、真实状态、递归检出和启动说明
+.gitmodules                       # 前后端独立仓库地址；根 Git 固定提交指针
+contracts/                        # 唯一合同源：OpenAPI、schema、正反例
+frontend/                         # 独立 Git 子模块，Node/pnpm 工程
+  AGENTS.md                       # 前端补充规范，不覆盖根业务约束
+  apps/web/                       # Nuxt 公开站；只实现公开渲染
+  apps/admin/                     # Vue/Vite 管理端
+  packages/api-client/src/
+    generated/                    # 从根 contracts 生成，不手改
+    transport/                    # fetch、CSRF、幂等、错误转换
+  packages/ui/                    # 共享 token 和必要基础组件
+  pnpm-lock.yaml                  # 独立前端依赖锁
+backend/                          # 独立 Git 子模块，Go 工程
+  AGENTS.md                       # 后端补充规范
   cmd/api/                        # HTTP 服务及受控后台执行器
   cmd/site-admin/                 # 账号、密码、诊断和维护 CLI
-  internal/
-    auth/ content/ comments/ media/ taxonomy/
-    sync/ jobs/ settings/          # 各业务模块
-    httpapi/ store/ config/        # HTTP 适配、数据库基础设施、配置
-  migrations/                     # Goose SQL 迁移
-contracts/                        # OpenAPI、内容文件 schema、正反例
-tests/
-  e2e/                            # 浏览器通过真实服务验证主流程
-  integration/                    # 跨进程 HTTP、Git、恢复与故障用例
-  fixtures/                       # 可提交的虚构内容及小型图片样例
+  internal/                       # 模块业务、HTTP 适配及基础设施
+  migrations/                     # Goose SQL；结构权威源
+  scripts/                        # 独立 check/test/build 入口
+  go.mod / go.sum                  # 独立 Go 依赖锁
 scripts/
-  dev/                            # 本地工具检查、启动、状态、停止
-  test/                           # 独立环境准备、运行与清理
-  validate_design.py              # 已有设计验证
-  render_design_references.py     # 已有参考文档生成
-deploy/
-  local/                          # 本地 HTTPS 代理与配置样例
-  production/                     # Caddy、systemd、部署和恢复模板
-docs/
-  design/                         # 详细设计，不手改生成字典
-  verification/                   # 各阶段验证记录、环境与结果
-  development-plan.md             # 阶段、任务、依赖和完成条件
-  local-integration.md            # 本地服务拓扑与联调场景
-var/                              # 被忽略的本地运行数据、日志和证书
-prototype/                        # 既有独立仓库，仅作交互设计参考
+  dev/                            # 工具检查、跨仓库质量与服务编排
+  test/                           # 独立运行环境准备与清理
+  validate_design.py              # 同时校验根合同和后端迁移
+  render_design_references.py     # 从合同和迁移生成根 docs 字典
+tests/integration/                # 真实跨进程 HTTPS 等用例
+tests/e2e/                        # 真实服务浏览器验证
+tests/fixtures/                   # 对应阶段创建的虚构样例
+deploy/local/                     # 本地 HTTPS 代理配置
+deploy/production/                # 对应阶段创建部署模板
+docs/                             # 唯一需求、设计、计划与验收文档
+var/                              # 被忽略的根运行数据、缓存、证书和日志
+prototype/                        # 既有独立原型仓库，不并入源码
 ```
 
-- 应用源码使用一个 monorepo；内容同步使用另一个私有仓库。`prototype/` 的 `.git` 不并入应用仓库，其 localStorage 模拟数据不得作为生产实现。
+- 根仓库统一维护 `contracts/`、`docs/`、跨服务测试与编排；`frontend/`、`backend/` 通过 Git submodule 纳入，禁止复制合同或设计文档到子仓库。前端内部共享包使用 pnpm workspace；内容同步仍使用另一个私有仓库。`prototype/` 的 `.git` 不并入应用仓库，其 localStorage 模拟数据不得作为生产实现。
 - 不创建没有职责的通用 `utils` 大杂烩；模块内先就近组织，仅在出现真实跨模块需求时抽取。
 - Go 测试就近放 `*_test.go`；前端单元测试就近放 `*.test.ts`；跨服务用例放 `tests/`。生成客户端、运行数据与手写代码分开。
 - 数据库、原图运行目录、仓库凭据、会话、日志、备份、测试证书和真实访客数据不提交。`.env.example` 仅含占位符。`var/` 是本地工作区，不是部署产物。
@@ -106,8 +94,8 @@ prototype/                        # 既有独立仓库，仅作交互设计参�
 
 - 用户已授权子代理参与开发。主代理负责拆分、公共接口、集成、验证和最终交付；可以并行执行边界明确的实现、测试或审查任务，无需为每次分派重复请求授权。
 - 每个任务说明目标、依赖、允许修改的路径、禁止修改的共享文件、输入输出合同、验证方式和交付格式。按模块和阶段分配，不让多个代理同时修改同一文件。
-- `contracts/`、数据库迁移、根依赖/锁文件、`packages/api-client/`、公共错误模型和内容状态服务在同一时间指定一个负责人。其他代理提出变更请求，由负责人统一修改及生成。
-- 共享工作区不必为并行工作强行创建分支；需要隔离时，在应用 Git 仓库建立后再使用独立 worktree，并明确集成顺序。不得把原型仓库误当应用仓库。
+- `contracts/`、数据库迁移、根依赖/锁文件、`frontend/packages/api-client/`、公共错误模型和内容状态服务在同一时间指定一个负责人。其他代理提出变更请求，由负责人统一修改及生成。
+- 分派任务必须明确根仓库或子模块；每个仓库分别检查分支和改动。需要隔离时在所属仓库创建 worktree，禁止同时修改同一子模块指针。不得把原型仓库误当应用仓库。
 - 每个代理使用独立测试数据库、Git 工作区和运行目录；端口由主代理分配。不得共用可写测试库、同时占用同一端口或停止其他任务服务。
 - 子代理交付必须列出修改文件、行为变化、实际执行的命令和结果、未验证事项。发现依赖/合同冲突立即反馈，不自行引入另一套 API 或状态模型。
 - 主代理复核中文注释、合同一致性和业务边界，合并后在同一套本地真实服务上执行跨模块联调。子任务各自通过不等于集成通过。
@@ -124,8 +112,17 @@ prototype/                        # 既有独立仓库，仅作交互设计参�
 
 ## 8 提交与完成条件
 
-- 主分支 `main`，短期 `feat/`、`fix/`、`docs/`；提交使用 `feat(content): 支持保存修改稿` 形式。提交前确认真实仓库与分支，不擅自推送或部署。
+- 根仓库和两个子模块的主分支均为 `main`，短期 `feat/`、`fix/`、`docs/`；提交使用 `feat(content): 支持保存修改稿` 形式。提交前确认真实仓库与分支，不擅自推送或部署。
 - 已应用迁移不得改写；结构变化新增迁移。OpenAPI 变化同步类型、样例、API 说明与相关测试；生成字典用现有生成脚本更新。
 - 一个任务完成需满足：实现与合同一致；中文注释到位；相关检查通过；本地行为有可复现记录；文档/生成产物同步；无未说明的失败或遗留服务。
 - 验证记录放 `docs/verification/`，写明时间、版本/提交或文件范围、工具链、命令、数据规模、结果、日志位置、剩余限制；只记录实际执行的内容。
 - P1 已建立检查、测试、构建及本地 HTTPS 脚本，使用项目工具入口 `sh scripts/dev/with-tools.sh pnpm <命令>`；安装及用法见 [P1 本地开发说明](docs/development/p1-local.md)。`check` 包含设计验证；`test` 包含单元、Go race 和编排故障测试；跨进程与浏览器分别执行 `test:integration`、`test:e2e`。后续阶段按真实实现扩展，不能把 P1 通过视为内容、同步或生产验收通过。
+
+## 9 子模块与共享合同
+
+- 首次检出使用 `git clone --recurse-submodules git@github.com:calm195/my-web.git`；已有工作区执行 `git submodule update --init --recursive`。日常变更先在子模块切换到开发分支，避免在 detached HEAD 遗失提交。
+- 三个仓库地址以 `.gitmodules` 和各自 origin 为准。根提交固定合同、文档及两个 gitlink 版本；不使用浮动分支或 `submodule update --remote` 代替验收版本。
+- 前端类型生成读取根 `contracts/`；可通过绝对路径 `SITE_CONTRACTS_DIR` 显式指定同一套合同。单独克隆前端可用已提交类型构建；完整合同检查必须在根工作区进行。后端构建不依赖 Node，前端构建不依赖 Go。
+- 根执行 `pnpm install:all` 冻结安装根和前端各自锁文件。根工具链用于联调；子仓库独立检查仍执行各自精确版本要求。
+- 子仓库先提交，根仓库在联调通过后提交合同、文档与子模块指针。推送需获得用户授权，顺序为后端、前端、根；先确保被引用的子提交可获取。
+- `pnpm check:workspace` 检查子模块与唯一合同位置；正式记录版本前执行 `node scripts/dev/workspace.mjs --locked`，确保子仓库干净且根索引指针一致。根和子模块均须分别检查未提交改动。

@@ -95,7 +95,7 @@ try {
   await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible()
   await page.goto(`${s.c.origin}/admin/session`)
   s.execute(
-    path.join(s.root, 'backend/bin/site-admin'),
+    path.join(s.backendRoot, 'bin/site-admin'),
     ['reset-password', '--username', s.credentials.username],
     { env: s.serviceEnv(), input: s.credentials.password + '-changed\n' },
   )
